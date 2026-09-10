@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/wakb-install.log) 2>&1
+
+cat > /etc/wakb.env <<ENV
+DATA_DIR=/opt/wakb/data
+BRAIN_FUNCTION=${brain_function}
+AWS_REGION=${aws_region}
+ALLOWED_GROUPS=${allowed_groups}
+ALLOW_DMS=${allow_dms}
+ENV
+chmod 640 /etc/wakb.env
+
+dnf install -y -q git
+export REPO_URL="${repo_url}" GIT_REF="${git_ref}"
+git clone -q --depth 1 --branch "$GIT_REF" "$REPO_URL" /tmp/wakb-src
+bash /tmp/wakb-src/listener/install.sh
+rm -rf /tmp/wakb-src

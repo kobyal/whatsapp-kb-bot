@@ -1,0 +1,14 @@
+node_modules/
+brain/kb.json
+brain/__pycache__/
+__pycache__/
+*.zip
+.DS_Store
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/build/
+infra/terraform/terraform.tfvars
+infra/terraform/.terraform.lock.hcl
+# WhatsApp session credentials must never be committed
+auth/
+data/

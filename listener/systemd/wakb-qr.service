@@ -1,0 +1,14 @@
+[Unit]
+Description=WhatsApp KB bot - QR page on 127.0.0.1:8080
+After=network-online.target
+
+[Service]
+User=wakb
+WorkingDirectory=/opt/wakb/src/listener
+EnvironmentFile=/etc/wakb.env
+ExecStart=/usr/bin/node qrserve.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,232 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  WhatsApp KB bot: an always-on EC2 listener (Baileys) that forwards group messages to a
+  Lambda brain, which picks a knowledge-base entry with Amazon Bedrock or stays silent.
+  Deploy with infra/cloudformation/deploy.sh, which packages the Lambda first.
+
+Parameters:
+  NamePrefix:
+    Type: String
+    Default: wakb
+    Description: Prefix for every resource name.
+  AllowedGroups:
+    Type: String
+    Default: ""
+    Description: Comma-separated WhatsApp group jids or exact group subjects the bot may answer in. Empty answers nobody.
+  AllowDms:
+    Type: String
+    Default: "0"
+    AllowedValues: ["0", "1"]
+    Description: Also answer 1:1 chats.
+  RepoUrl:
+    Type: String
+    Default: https://github.com/kobyal/whatsapp-kb-bot.git
+    Description: Git repo the instance clones at boot for the listener code. Point it at your fork.
+  GitRef:
+    Type: String
+    Default: main
+  InstanceType:
+    Type: String
+    Default: t3.small
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the packaged brain zip (deploy.sh uploads it).
+  CodeKey:
+    Type: String
+    Default: brain.zip
+  ClassifyModel:
+    Type: String
+    Default: eu.anthropic.claude-haiku-4-5-20251001-v1:0
+  VisionModel:
+    Type: String
+    Default: eu.anthropic.claude-sonnet-4-6
+  MinConfidence:
+    Type: String
+    Default: "0.85"
+  AnswerMode:
+    Type: String
+    Default: verbatim
+    AllowedValues: [verbatim, compose]
+  BotHeader:
+    Type: String
+    Default: "🤖 _Automated answer from the support bot_"
+  VpcCidr:
+    Type: String
+    Default: 10.42.0.0/24
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  # ---------------------------------------------------------------- network
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: !Sub "${NamePrefix}-vpc" }]
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: { VpcId: !Ref Vpc, InternetGatewayId: !Ref InternetGateway }
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref VpcCidr
+      MapPublicIpOnLaunch: true
+      Tags: [{ Key: Name, Value: !Sub "${NamePrefix}-public" }]
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: { VpcId: !Ref Vpc }
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  SubnetRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties: { SubnetId: !Ref PublicSubnet, RouteTableId: !Ref PublicRouteTable }
+  ListenerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: WhatsApp listener - no inbound, all outbound
+      VpcId: !Ref Vpc
+      SecurityGroupEgress:
+        - { IpProtocol: "-1", CidrIp: 0.0.0.0/0 }
+
+  # ---------------------------------------------------------------- knowledge base
+  KbTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${NamePrefix}-kb-entries"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
+      KeySchema: [{ AttributeName: id, KeyType: HASH }]
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+
+  # ---------------------------------------------------------------- brain
+  BrainRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-brain"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: bedrock-and-kb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [bedrock:InvokeModel, bedrock:InvokeModelWithResponseStream]
+                Resource:
+                  - arn:aws:bedrock:*::foundation-model/*
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+              - Effect: Allow
+                Action: dynamodb:Scan
+                Resource: !GetAtt KbTable.Arn
+  BrainLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${NamePrefix}-brain"
+      RetentionInDays: 30
+  BrainFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: BrainLogGroup
+    Properties:
+      FunctionName: !Sub "${NamePrefix}-brain"
+      Description: "WhatsApp KB bot brain: routes a message to a KB entry with Bedrock, or stays silent"
+      Runtime: python3.12
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt BrainRole.Arn
+      Timeout: 60
+      MemorySize: 512
+      Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
+      Environment:
+        Variables:
+          KB_TABLE: !Ref KbTable
+          CLASSIFY_MODEL: !Ref ClassifyModel
+          VISION_MODEL: !Ref VisionModel
+          MIN_CONFIDENCE: !Ref MinConfidence
+          ANSWER_MODE: !Ref AnswerMode
+          BOT_HEADER: !Ref BotHeader
+
+  # ---------------------------------------------------------------- listener
+  ListenerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${NamePrefix}-listener"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: invoke-brain
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !GetAtt BrainFunction.Arn
+  ListenerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${NamePrefix}-listener"
+      Roles: [!Ref ListenerRole]
+  ListenerInstance:
+    Type: AWS::EC2::Instance
+    DependsOn: DefaultRoute
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [!Ref ListenerSecurityGroup]
+      IamInstanceProfile: !Ref ListenerInstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs: { VolumeSize: 16, VolumeType: gp3, Encrypted: true }
+      Tags: [{ Key: Name, Value: !Sub "${NamePrefix}-listener" }]
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          exec > >(tee /var/log/wakb-install.log) 2>&1
+          cat > /etc/wakb.env <<ENV
+          DATA_DIR=/opt/wakb/data
+          BRAIN_FUNCTION=${BrainFunction}
+          AWS_REGION=${AWS::Region}
+          ALLOWED_GROUPS=${AllowedGroups}
+          ALLOW_DMS=${AllowDms}
+          ENV
+          chmod 640 /etc/wakb.env
+          dnf install -y -q git
+          export REPO_URL="${RepoUrl}" GIT_REF="${GitRef}"
+          git clone -q --depth 1 --branch "$GIT_REF" "$REPO_URL" /tmp/wakb-src
+          bash /tmp/wakb-src/listener/install.sh
+          rm -rf /tmp/wakb-src
+  # IMDSv2 is enforced through a launch-template-free route: AL2023 defaults to IMDSv2
+  # required, so no extra property is needed here.
+
+Outputs:
+  InstanceId:
+    Value: !Ref ListenerInstance
+  BrainFunction:
+    Value: !Ref BrainFunction
+  KbTable:
+    Value: !Ref KbTable
+  NextSteps:
+    Value: !Sub "publish: python3 kb/publish.py --table ${KbTable} | ask: scripts/ask.sh ${BrainFunction} 'question' | link: scripts/qr.sh ${ListenerInstance}"

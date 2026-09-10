@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "description": "Sample knowledge base for an internal developer-tools support group. Replace every entry with your own. The bot sends `answer` verbatim, so write it exactly the way you want it to appear in the chat.",
+  "entries": [
+    {
+      "id": "vpn_not_connecting",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "vpn won't connect",
+        "vpn keeps disconnecting",
+        "can't reach internal sites from home",
+        "vpn stuck on connecting"
+      ],
+      "error_strings": [
+        "The VPN connection failed due to unsuccessful domain name resolution"
+      ],
+      "answer": "VPN checklist:\n1. Quit the VPN client completely (not just disconnect) and reopen it.\n2. Make sure you are on the *Corp-Remote* profile, not *Corp-Guest*.\n3. If it still fails, toggle Wi-Fi off and on. Hotel and cafe networks often block UDP 443; switch to your phone's hotspot to confirm.\n\nStill stuck after that? Open a ticket with the exact error text and the time it happened.",
+      "owner": "IT helpdesk",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "sso_session_expires_every_4h",
+      "category": "auth",
+      "status": "published",
+      "triggers": [
+        "logged out every few hours",
+        "have to sign in again and again",
+        "token expired",
+        "sso keeps asking me to log in"
+      ],
+      "error_strings": [
+        "AADSTS70043",
+        "The refresh token has expired due to inactivity"
+      ],
+      "answer": "This is expected: the company's Conditional Access policy limits developer-tool sessions to 4 hours.\n\nThe fix is to let the CLI reuse your browser session instead of an isolated profile:\n```\ndevtool config set browser.profile default\n```\nAfter that, a sign-in lasts as long as your normal browser login does. If you still get AADSTS70043, delete the folder `~/.devtool/chrome-profile` and sign in once more.",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "cli_install_windows",
+      "category": "install",
+      "status": "published",
+      "triggers": [
+        "how do I install the cli on windows",
+        "where do I download devtool",
+        "installation on windows",
+        "setup on my laptop"
+      ],
+      "error_strings": [],
+      "answer": "Windows install, three steps:\n1. Open the *Software Center* and install **DevTool CLI**. Do not download it from the internet; the internal build carries the proxy settings you need.\n2. Open a new terminal and run `devtool setup`. It will open the browser for sign-in.\n3. Run `devtool doctor`. Everything should be green.\n\nMac and Linux: `brew install acme/tap/devtool`, then the same two commands.",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "proxy_403_blocked",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "403 forbidden from the proxy",
+        "application blocked",
+        "request blocked by the firewall",
+        "can't reach the api from the office network"
+      ],
+      "error_strings": [
+        "403 Forbidden",
+        "Application Blocked",
+        "ERR_TUNNEL_CONNECTION_FAILED"
+      ],
+      "answer": "A 403 from the office network means the destination is not on the egress allowlist yet. Nothing is wrong with your setup.\n\nSend the exact hostname (for example `api.example.com`) to the network team in #net-access with a one-line business reason. Approval usually takes one working day.\n\nTip: `devtool doctor --network` prints every host the tool needs, so you can request them all at once.",
+      "owner": "Network team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "git_pat_auth_failed",
+      "category": "auth",
+      "status": "published",
+      "triggers": [
+        "git push asks for a password",
+        "authentication failed for git",
+        "my personal access token stopped working",
+        "can't clone the repo"
+      ],
+      "error_strings": [
+        "remote: Authentication failed",
+        "fatal: Authentication failed for"
+      ],
+      "answer": "Personal access tokens expire after 90 days, and Git keeps trying the old one.\n\n1. Create a new token in *User settings > Personal access tokens* with the **Code (read & write)** scope.\n2. Remove the stale one from your credential store:\n   - Windows: Control Panel > Credential Manager > Windows Credentials > remove the `git:https://...` entry.\n   - Mac: Keychain Access > search the host > delete.\n3. Run `git pull` once; paste the new token when asked.",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "docker_daemon_not_running",
+      "category": "tooling",
+      "status": "published",
+      "triggers": [
+        "docker isn't working",
+        "cannot connect to the docker daemon",
+        "docker desktop won't start"
+      ],
+      "error_strings": [
+        "Cannot connect to the Docker daemon at unix:///var/run/docker.sock",
+        "error during connect: this error may indicate that the docker daemon is not running"
+      ],
+      "answer": "The Docker daemon is not running.\n\n- Mac/Windows: start **Docker Desktop** from the applications menu and wait for the whale icon to stop animating.\n- Linux: `sudo systemctl start docker`, then `sudo usermod -aG docker $USER` and log out and back in so you can run it without sudo.\n\nIf Docker Desktop refuses to start on Windows, make sure WSL 2 is enabled: `wsl --status`.",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "request_tool_access",
+      "category": "access",
+      "status": "published",
+      "triggers": [
+        "how do I get access",
+        "who can add me to the tool",
+        "I don't have permission to use devtool",
+        "request a license"
+      ],
+      "error_strings": [
+        "You are not a member of an authorized group"
+      ],
+      "answer": "Access is granted through the AD group **DevTool-Users**.\n\nAsk your manager to approve you in the *Access Portal* (search for \"DevTool\"). Sync to the tool takes up to 30 minutes after approval; sign out and back in once to pick it up.",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    },
+    {
+      "id": "which_version_is_current",
+      "category": "release",
+      "status": "published",
+      "triggers": [
+        "what is the latest version",
+        "am I on the current version",
+        "how do I update",
+        "is there a new release"
+      ],
+      "error_strings": [],
+      "answer": "Current release: **1.4.2** (2026-09-01).\n\nCheck yours with `devtool --version` and update with `devtool update`. Release notes are posted in #devtool-announcements every Monday.\n\n_Editors: this entry goes stale fast. Update the version and `last_verified` with every release._",
+      "owner": "Platform team",
+      "last_verified": "2026-09-01"
+    }
+  ]
+}

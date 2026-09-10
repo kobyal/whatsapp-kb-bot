@@ -1,0 +1,5 @@
+aws_region     = "eu-west-1"
+name_prefix    = "wakb"
+allowed_groups = ["My Team Support"]   # group subject(s) or jid(s)
+allow_dms      = false
+repo_url       = "https://github.com/<you>/whatsapp-kb-bot.git"
