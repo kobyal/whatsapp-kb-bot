@@ -133,7 +133,7 @@ The allowlist fails closed. An empty list answers nobody. This matters more than
 
 ### The QR page nobody tells you about
 
-Linking a device means scanning a QR code. The code **rotates every 20 seconds or so**. The first time I tried "save the QR to a PNG and send it to the person with the phone", seven codes had expired by the time they opened the image.
+Linking a device means scanning a QR code. The code **rotates every 20 to 60 seconds** depending on the library version. The first time I tried "save the QR to a PNG and send it to the person with the phone", seven codes had expired by the time they opened the image.
 
 So `qrserve.js` is a page that re-renders the current code every 4 seconds. It binds to `127.0.0.1` on the instance and you reach it through an SSM port-forward. Never expose a linking QR publicly: anyone who scans it links the bot account to *their* phone.
 
@@ -183,6 +183,10 @@ infra/cloudformation/deploy.sh wakb <your-deploy-bucket> \
 ```
 
 ![CloudFormation stack](images/cloudformation-stack.png)
+
+**What the test deploy caught.** I said I deployed this fresh while writing, and it paid for itself twice. On Amazon Linux 2023 the `nodejs20` package wires `/usr/bin/node` through the alternatives system, and my installer helpfully overwrote that link with a symlink to itself. And on first boot the OS runs its own package transaction for a minute, so a plain `dnf install` can lose the rpm lock and die. Both are fixed in the repo: no hand-made symlink, and a retry loop around the installer. The instance now comes up clean from user-data on the first try, with one retry logged.
+
+![EC2 instance](images/ec2-console.png)
 
 ### Step 3: publish the knowledge base
 
@@ -239,6 +243,8 @@ Open http://localhost:8090. On the bot's phone: WhatsApp → Linked devices → 
 
 ![QR page](images/qr-page.png)
 
+*The code is pixelated on purpose: a live linking QR is a credential.*
+
 You will see `connection closed (code=515)` in the log right after pairing. That is normal: Baileys asks for a restart after the first link, and systemd restarts it in five seconds. Then:
 
 ```
@@ -246,8 +252,6 @@ You will see `connection closed (code=515)` in the log right after pairing. That
 ```
 
 ### Step 6: ask it something
-
-![WhatsApp conversation](images/whatsapp-chat.png)
 
 ```
 [..] IN  9725XXXXXXXX@s.whatsapp.net: my vpn keeps disconnecting every 10 minutes

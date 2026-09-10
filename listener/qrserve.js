@@ -1,5 +1,5 @@
 // Serves the CURRENT WhatsApp linking QR as a page that re-renders every 4 seconds.
-// The QR rotates every ~20 s, so "save it to a PNG and send it to someone" always
+// The QR rotates every 20-60 s, so "save it to a PNG and send it to someone" always
 // loses the race; a self-refreshing page does not.
 //
 // Bound to 127.0.0.1 only. Reach it through an SSM port-forward (scripts/qr.sh). A
