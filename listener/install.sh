@@ -30,7 +30,7 @@ if [ ! -f /etc/wakb.env ]; then
 DATA_DIR=/opt/wakb/data
 BRAIN_FUNCTION=${BRAIN_FUNCTION:-wakb-brain}
 AWS_REGION=${AWS_REGION:-eu-west-1}
-ALLOWED_GROUPS=${ALLOWED_GROUPS:-}
+ALLOWED_GROUPS="${ALLOWED_GROUPS:-}"
 ALLOW_DMS=${ALLOW_DMS:-0}
 ENV
   chmod 640 /etc/wakb.env

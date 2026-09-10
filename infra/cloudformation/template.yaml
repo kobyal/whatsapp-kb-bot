@@ -209,7 +209,7 @@ Resources:
           DATA_DIR=/opt/wakb/data
           BRAIN_FUNCTION=${BrainFunction}
           AWS_REGION=${AWS::Region}
-          ALLOWED_GROUPS=${AllowedGroups}
+          ALLOWED_GROUPS="${AllowedGroups}"
           ALLOW_DMS=${AllowDms}
           ENV
           chmod 640 /etc/wakb.env

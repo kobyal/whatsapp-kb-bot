@@ -6,7 +6,7 @@ cat > /etc/wakb.env <<ENV
 DATA_DIR=/opt/wakb/data
 BRAIN_FUNCTION=${brain_function}
 AWS_REGION=${aws_region}
-ALLOWED_GROUPS=${allowed_groups}
+ALLOWED_GROUPS="${allowed_groups}"
 ALLOW_DMS=${allow_dms}
 ENV
 chmod 640 /etc/wakb.env
