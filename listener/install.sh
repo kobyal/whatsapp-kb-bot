@@ -14,8 +14,17 @@ GIT_REF="${GIT_REF:-main}"
 
 # AL2023 ships node as the nodejs20 package and wires /usr/bin/node through alternatives.
 # Do not create /usr/bin/node by hand: a symlink over the alternatives link loops on itself.
-if command -v dnf >/dev/null; then dnf install -y -q git nodejs20 nodejs20-npm
-else apt-get update -q && apt-get install -y -q git nodejs npm; fi
+# First boot on AL2023 runs its own package transaction for a minute or so; a plain dnf call
+# then fails with "can't create transaction lock". Retry instead of dying.
+pkg_install() {
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if command -v dnf >/dev/null; then dnf install -y -q "$@" && return 0
+    else apt-get update -q && apt-get install -y -q "$@" && return 0; fi
+    echo "package manager busy, retry $i"; sleep 10
+  done
+  return 1
+}
+if command -v dnf >/dev/null; then pkg_install git nodejs20 nodejs20-npm; else pkg_install git nodejs npm; fi
 command -v node >/dev/null || { echo "node is not on PATH after install"; exit 1; }
 
 id wakb >/dev/null 2>&1 || useradd -r -m -d /opt/wakb -s /sbin/nologin wakb

@@ -213,7 +213,7 @@ Resources:
           ALLOW_DMS=${AllowDms}
           ENV
           chmod 640 /etc/wakb.env
-          dnf install -y -q git
+          for i in $(seq 1 10); do dnf install -y -q git && break; echo "dnf busy, retry $i"; sleep 10; done
           export REPO_URL="${RepoUrl}" GIT_REF="${GitRef}"
           git clone -q --depth 1 --branch "$GIT_REF" "$REPO_URL" /tmp/wakb-src
           bash /tmp/wakb-src/listener/install.sh
