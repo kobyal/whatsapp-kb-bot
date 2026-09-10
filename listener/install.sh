@@ -12,9 +12,11 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/kobyal/whatsapp-kb-bot.git}"
 GIT_REF="${GIT_REF:-main}"
 
-if command -v dnf >/dev/null; then dnf install -y -q git nodejs20 nodejs20-npm && alternatives --set node /usr/bin/node-20 2>/dev/null || true
+# AL2023 ships node as the nodejs20 package and wires /usr/bin/node through alternatives.
+# Do not create /usr/bin/node by hand: a symlink over the alternatives link loops on itself.
+if command -v dnf >/dev/null; then dnf install -y -q git nodejs20 nodejs20-npm
 else apt-get update -q && apt-get install -y -q git nodejs npm; fi
-ln -sf "$(command -v node)" /usr/bin/node
+command -v node >/dev/null || { echo "node is not on PATH after install"; exit 1; }
 
 id wakb >/dev/null 2>&1 || useradd -r -m -d /opt/wakb -s /sbin/nologin wakb
 mkdir -p /opt/wakb/data
