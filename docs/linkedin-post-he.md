@@ -28,7 +28,7 @@
 מקסימום 8 משתתפים, והעסק חייב ליצור את הקבוצה. לקבוצה קיימת של 120 אנשים אין מסלול רשמי. יש מסלול לא רשמי, עם סיכון חסימה אמיתי, ואני מפרט אותו בכנות.
 
 5. אף פעם, אבל אף פעם, לא על המספר שלכם.
-חסימה על המספר האישי = כל הוואטסאפ שלכם נעלם, בלי ערעור. סים פריפייד ייעודי במחיר של פלאפל, טלפון ישן, ושום דבר חשוב לא מחובר למספר הזה.
+חסימה על המספר האישי = כל הוואטסאפ שלכם נעלם, בלי ערעור. סים פריפייד ייעודי, טלפון ישן, ושום דבר חשוב לא מחובר למספר הזה. (בישראל: סים של רמי לוי עם חבילת דאטה ל־3 שנים, כ־150 ש"ח פעם אחת. ה"50 שקל וזהו" של HOT זה 180 יום, ואז המספר עלול להתמחזר.)
 
 הפכתי את זה לתבנית פתוחה: EC2 קטן שמחזיק את החיבור, Lambda שמחליטה, Bedrock עם Claude Haiku, DynamoDB לבסיס הידע. פחות מ־500 שורות. Terraform או CloudFormation. פרסתי מאפס לחשבון נקי כדי לוודא שההוראות עובדות, מצאתי שני באגים בדרך, ואז בדקתי בקבוצה אמיתית: 9 הודעות, 9 החלטות נכונות, כולל צילום מסך של שגיאה.
 
@@ -64,7 +64,7 @@ So I built a bot that sits in the group and answers what repeats. It has run for
 
 4. The official WhatsApp API has no way into groups. 8 participants max, business-created only. For an existing 120-person group there is no compliant route. There is an unofficial one, with real ban risk, and I spell it out.
 
-5. Never on your own number. A ban on your personal number takes your whole WhatsApp with it. Dedicated prepaid SIM, old phone, nothing important attached.
+5. Never on your own number. A ban on your personal number takes your whole WhatsApp with it. Dedicated prepaid SIM with multi-year validity (in Israel: Rami Levy, ~₪150 once for 3 years), old phone, nothing important attached.
 
 I turned it into an open template: a small EC2 for the WhatsApp session, a Lambda that decides, Bedrock with Claude Haiku, DynamoDB for the knowledge base. Under 500 lines. Terraform or CloudFormation. Deployed from scratch into a clean account while writing (found two bugs), then tested live: 9 messages, 9 correct decisions, screenshot included.
 

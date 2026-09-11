@@ -55,7 +55,17 @@ So:
 - **Not a virtual or VoIP number.** WhatsApp rejects most of them at registration and bans the rest later.
 - **Do not attach anything you care about to that number**: no bank, no 2FA, no Google recovery.
 
-SIM_SECTION_PLACEHOLDER
+**What "a dedicated number" costs in practice (Israel, September 2026 prices).** Every carrier's prepaid terms let them recycle a line that goes unused, so the metric is *shekels per month of guaranteed validity*, not the sticker price:
+
+| Option | One-time cost | Number stays valid | Notes |
+|---|---|---|---|
+| **Rami Levy prepaid SIM + long data bundle** | ₪7 SIM + ~₪140 bundle | **24 to 36 months** | Cheapest per month (~₪4–6). Pelephone network. Real mobile number, SMS works for the verification |
+| **Partner Bigtalk kit** | ₪80–90 incl. a 12-month card | 12 to 18 months per card | National carrier, eSIM available |
+| **HOT mobile HOTALK BASIC 50** | ₪50 card + SIM | **180 days** per card | This is the "50 shekels and that's it" people mention. True for six months, then you top up or lose the number |
+| **019 Mobile prepaid** | ₪10 SIM, ₪49 for 30 days | 30 days per package; resellers report recycling after ~6 months idle | Fine, but not the cheapest way to keep a number alive |
+| Virtual / VoIP +972 numbers, tourist eSIMs | $5–30 | days to weeks | **Do not.** WhatsApp rejects VoIP numbers at registration, and tourist eSIMs expire under you |
+
+My pick: the Rami Levy blank SIM with a multi-year data bundle, in a spare Android that lives on Wi-Fi, plus a calendar reminder a month before the bundle ends. WhatsApp itself needs that phone online only once every 14 days to keep the linked device alive, and deletes an account after 120 days offline. Prices move monthly; check before buying. Full comparison with sources: [docs/research/israel-prepaid-sim.md](../research/israel-prepaid-sim.md).
 
 ### A linked device is a socket, so Lambda cannot be the bot
 
