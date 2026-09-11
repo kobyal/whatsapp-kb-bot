@@ -3,3 +3,6 @@ name_prefix    = "wakb"
 allowed_groups = ["My Team Support"]   # group subject(s) or jid(s)
 allow_dms      = false
 repo_url       = "https://github.com/<you>/whatsapp-kb-bot.git"
+# If your account has an instance scheduler that stops untagged/tagged instances:
+# disable_api_stop = true
+# ignore_tag_keys  = ["schedule"]

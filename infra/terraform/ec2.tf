@@ -9,6 +9,7 @@ resource "aws_instance" "listener" {
   iam_instance_profile        = aws_iam_instance_profile.listener.name
   associate_public_ip_address = true
   disable_api_termination     = var.disable_api_termination
+  disable_api_stop            = var.disable_api_stop
 
   metadata_options {
     http_tokens = "required" # IMDSv2 only
@@ -31,4 +32,10 @@ resource "aws_instance" "listener" {
   user_data_replace_on_change = true
 
   tags = { Name = "${var.name_prefix}-listener" }
+
+  # The AMI comes from the "latest AL2023" SSM parameter, which changes every few weeks.
+  # Without this, a routine apply would replace the instance and drop the WhatsApp session.
+  lifecycle {
+    ignore_changes = [ami]
+  }
 }

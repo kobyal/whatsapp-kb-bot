@@ -80,6 +80,18 @@ variable "vpc_cidr" {
   default     = "10.42.0.0/24"
 }
 
+variable "disable_api_stop" {
+  description = "Stop protection. Turn on if your account runs an instance scheduler or a cost enforcer that stops instances: they must call StopInstances first, and this makes that fail."
+  type        = bool
+  default     = false
+}
+
+variable "ignore_tag_keys" {
+  description = "Tag keys added by account-level automation (auto-taggers, schedulers) that Terraform should not fight over, e.g. [\"schedule\"]."
+  type        = list(string)
+  default     = []
+}
+
 variable "disable_api_termination" {
   description = "Protect the listener from accidental termination (and from account-wide instance schedulers that stop first)."
   type        = bool

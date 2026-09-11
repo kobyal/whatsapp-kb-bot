@@ -93,6 +93,14 @@ Then steps 2–5 above.
 - **Update the listener code**: `terraform apply` after changing `git_ref`, or on the box
   `sudo bash /opt/wakb/src/listener/install.sh`.
 
+## If your account has an instance scheduler
+
+Many company accounts run automation that tags new instances (for example `schedule = stop_dont_start`)
+and stops them on a timer. That kills the WhatsApp session. Two Terraform variables handle it:
+`disable_api_stop = true` makes every `StopInstances` call fail, and `ignore_tag_keys = ["schedule"]`
+stops Terraform from fighting the tagger. The trade-off: you cannot stop the instance yourself
+without first turning protection off. This bit me in the test account on the first night.
+
 ## How the brain decides
 
 ```
