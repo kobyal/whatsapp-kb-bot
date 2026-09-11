@@ -1,8 +1,12 @@
-# I built a WhatsApp bot that answers my team's questions from a knowledge base. Here is the whole thing, on AWS, in under 500 lines.
+# I built a WhatsApp bot that answers my team's repeat questions from a knowledge base. Here is the architecture, the cost, and the repo.
 
-*A step-by-step template: EC2 + Lambda + Amazon Bedrock, Terraform or CloudFormation, and the design decisions that kept it from embarrassing me in front of 120 developers.*
+*EC2 + Lambda + Amazon Bedrock, about $18 a month, Terraform or CloudFormation, deployed and tested live while writing. Plus the design rules that kept it from embarrassing me in front of 120 developers.*
 
 ![Architecture](images/architecture.png)
+
+**TL;DR** A small EC2 holds the WhatsApp session (Baileys). A Lambda asks Claude Haiku on Bedrock *which* human-written answer fits, and sends it verbatim if confidence clears a floor, otherwise says nothing. Knowledge base is a JSON file synced to DynamoDB. About $18/month. Terraform or CloudFormation, one `apply`. Tested live: nine messages, nine correct outcomes, screenshots included. Repo: [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot). Use a dedicated number, never your own.
+
+*Personal project, my own time and my own AWS account. Not a product of my employer and not endorsed by WhatsApp. It uses an unofficial WhatsApp client; section 1 explains what that means before you decide.*
 
 ---
 
@@ -37,6 +41,21 @@ I am not going to pretend otherwise, so here is how I live with it:
 - **Human pacing.** A random 1.5 to 4 second delay before every reply. Fixed machine cadence is one of the signals anti-automation systems key on.
 
 If that risk profile is not acceptable for you, jump to section 5: the *brain* half of this template works unchanged behind the official API, and I list the compliant options there.
+
+### Get the bot its own number. Not yours. Really.
+
+This deserves its own heading because it is the mistake people make once.
+
+The bot runs as a linked device of *some* WhatsApp account. If that account is yours, then a ban is a ban on **you**: your chats, your groups, your family, gone, with no appeal process that works. It also means every message the bot handles is visible to a session logged in as you, and every group you are in is a group the bot can technically see.
+
+So:
+
+- **A dedicated number**, on a **dedicated cheap phone** (any old Android works; it only needs to be online once every two weeks to keep the linked device alive).
+- **A prepaid SIM with no monthly commitment.** The number must not expire, because if the SIM dies, the number gets recycled and someone else's WhatsApp eventually inherits your bot's identity. See the SIM notes below for what that looks like in Israel.
+- **Not a virtual or VoIP number.** WhatsApp rejects most of them at registration and bans the rest later.
+- **Do not attach anything you care about to that number**: no bank, no 2FA, no Google recovery.
+
+SIM_SECTION_PLACEHOLDER
 
 ### A linked device is a socket, so Lambda cannot be the bot
 
@@ -258,10 +277,17 @@ I made a private group with just me and the bot and threw nine messages at it: t
 ![WhatsApp conversation](images/whatsapp-chat.png)
 
 ```
-[..] IN  9725XXXXXXXX@s.whatsapp.net: my vpn keeps disconnecting every 10 minutes
-[..] BRAIN answer id=vpn_not_connecting score=0.9 | kb dynamodb:8 (8 published); classify vpn_not_connecting 0.90 (...)
-[..] OUT vpn_not_connecting (412 chars)
+[04:32:54] IN  <sender>: my vpn keeps disconnecting every 10 minutes since this morning, anyone else?
+[04:32:56] BRAIN answer id=vpn_not_connecting score=0.85 | kb dynamodb:8 (8 published); classify vpn_not_connecting 0.85 (VPN disconnection issue matches typical phrasing)
+[04:32:59] OUT vpn_not_connecting (459 chars)
+[04:33:40] IN  <sender>: how do I connect the CLI to our Snowflake warehouse?
+[04:33:41] BRAIN silent id=null score=0 | classify none 0.95 (Question about Snowflake integration not in knowledge base)
+[04:38:06] IN  <sender>: what does this mean?? [+image]
+[04:38:20] BRAIN answer id=docker_daemon_not_running score=0.99 | vision: "I ran `docker ps` and got the error 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock…'"
+[04:38:23] OUT docker_daemon_not_running (454 chars)
 ```
+
+Notice the first one: 0.85, exactly on the floor. The sample KB has four phrasings per entry; a real KB with twenty gets paraphrases into the 0.9s. Notice also the third: the screenshot had a useless caption, and the vision pass turned the pixels into the exact error string the KB keys on. The full nine-case table is in [docs/TESTING.md](../TESTING.md).
 
 That is the whole loop.
 
@@ -292,9 +318,11 @@ If you take nothing else from this, take these. Each one cost me something to le
 
 Call it $18 a month plus a few cents a day.
 
+**This does incur costs.** Before you `apply`, set an AWS Budget alert at, say, $30/month. If you enable `compose` mode or point the classifier at a bigger model, watch the Bedrock line; the KB catalogue is sent with every message and grows with the KB.
+
 ### What could go wrong
 
-- **The number gets banned.** Covered above. Dedicated SIM, reply-only, human pacing. It is a real risk and I will not quantify it, because nobody outside Meta can.
+- **The number gets banned.** Covered in section 1. Dedicated SIM, reply-only, human pacing. It is a real risk and I will not quantify it, because nobody outside Meta can.
 - **The phone goes offline for 14 days.** WhatsApp unlinks devices. The listener notices, clears its credentials, and shows a new QR. Keep the phone plugged in somewhere.
 - **Bedrock model access is not enabled.** Every classify fails, the brain returns `silent` with the error in `note`, and the bot looks dead. Check `scripts/ask.sh` first.
 
@@ -310,8 +338,15 @@ I surveyed the open-source landscape while writing this; the full table is in [d
 
 Every platform above does more. None of them made my group's questions get answered more correctly, because the hard part was never the plumbing. It was the twenty-line knowledge base entry, its triggers, and the decision to say nothing when unsure. A small system you fully understand is easier to make careful than a large one you configure.
 
----
+## Try it yourself
 
-The repo is [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot). Fork it, replace `kb/kb.json` with your team's twenty questions, and tell me what broke.
+The repo is [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot). Everything in this article is in it: the code, both infra flavours, the sample knowledge base, the test log, and the survey of alternatives.
+
+1. Fork it. Replace `kb/kb.json` with your team's twenty questions.
+2. `terraform apply` (or `deploy.sh` for CloudFormation), publish the KB, run `scripts/ask.sh` until the answers look right.
+3. Get a dedicated SIM and an old phone. Scan the QR. Start in a private test group.
+4. Tell me what broke. Issues and pull requests are open.
+
+If you would rather not run an unofficial client, the brain works unchanged behind the official Cloud API for 1:1 support. Only the listener changes.
 
 *Koby Almog leads developer tooling adoption at a bank in Israel and writes about making AI tools useful in regulated environments.*
