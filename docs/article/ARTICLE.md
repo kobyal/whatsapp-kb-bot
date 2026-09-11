@@ -277,7 +277,7 @@ Open http://localhost:8090. On the bot's phone: WhatsApp → Linked devices → 
 You will see `connection closed (code=515)` in the log right after pairing. That is normal: Baileys asks for a restart after the first link, and systemd restarts it in five seconds. Then:
 
 ```
-[2026-09-10T16:42:11.803Z] READY as 9725XXXXXXXX; allowlist=["KB Bot Test"] dms=false
+[2026-09-10T16:42:11.803Z] READY as <bot number>; allowlist=["KB Bot Test"] dms=false
 ```
 
 ### Step 6: ask it something
