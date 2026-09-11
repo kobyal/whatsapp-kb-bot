@@ -253,6 +253,10 @@ You will see `connection closed (code=515)` in the log right after pairing. That
 
 ### Step 6: ask it something
 
+I made a private group with just me and the bot and threw nine messages at it: two paraphrased questions, one exact error string, one Hebrew question against an English KB, a screenshot of a terminal error with a vague caption, and four that should get silence (an off-KB question, a thank-you, an announcement, and a "docker is slow" that mentions a KB topic but is a different problem). Nine for nine.
+
+![WhatsApp conversation](images/whatsapp-chat.png)
+
 ```
 [..] IN  9725XXXXXXXX@s.whatsapp.net: my vpn keeps disconnecting every 10 minutes
 [..] BRAIN answer id=vpn_not_connecting score=0.9 | kb dynamodb:8 (8 published); classify vpn_not_connecting 0.90 (...)
