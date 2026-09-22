@@ -1,11 +1,11 @@
 # I gave a WhatsApp support bot to 200 colleagues. Here is what it took to make it shut up, listen, and learn.
 
-*A knowledge-base bot in two pilot groups at a bank, on EC2 + Lambda + Bedrock for about $18 a month. The model never writes an answer. The interesting part was everything it had to learn not to say.*
+*A knowledge-base bot in two pilot groups at a bank, on EC2 + Lambda + Bedrock for about \$18 a month. The model never writes an answer. The interesting part was everything it had to learn not to say.*
 
 ![Overall architecture: two groups and 1:1 chats feed a listener on EC2; a Lambda brain screens and classifies against per-tenant knowledge bases; a separate curator reads the log](images/01-architecture.png)
 *Figure 1. One WhatsApp account, one listener, one brain, one knowledge base per group, and a curator that can only read the log.*
 
-**TL;DR** A small EC2 instance holds the WhatsApp session. A Lambda asks a model *which* human-written answer fits and sends it word for word if confidence clears 0.90, asks one of three fixed questions between 0.70 and 0.90, and says nothing otherwise. It serves two pilot groups with separate knowledge bases, answers members in private chat, and a separate layer harvests confirmed answers from the log into the KB behind gates that run in code. Three months in, the lessons that mattered were about identity and structure, not prompts. Repo: [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot).
+**TL;DR** A small EC2 instance holds the WhatsApp session. A Lambda asks a model *which* human-written answer fits and sends it word for word if confidence clears 0.90, asks one of three fixed questions between 0.70 and 0.90, and says nothing otherwise. It serves two pilot groups with separate knowledge bases, answers members in private chat, and a separate layer harvests confirmed answers from the log into the KB behind gates that run in code. A few weeks in, the lessons that mattered were about identity and structure, not prompts. Repo: [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot).
 
 *Personal project, my own time and my own AWS account. Not a product of my employer, not endorsed by WhatsApp, and it uses an unofficial WhatsApp client; section 1 explains what that means before you decide whether to run one.*
 
@@ -162,12 +162,12 @@ botocore's default read timeout is 60 seconds. My Lambda's timeout was 60 second
 
 | Item | Monthly |
 |---|---|
-| EC2 t3.small, always on | ~$15 |
-| 16 GB gp3 | ~$1.50 |
-| Lambda, DynamoDB, CloudWatch | rounds to $0 at support-group volume |
-| Model calls, per message | $0.0013 when the screen drops it; ~$0.0024 when classified, with prompt caching |
+| EC2 t3.small, always on | ~\$15 |
+| 16 GB gp3 | ~\$1.50 |
+| Lambda, DynamoDB, CloudWatch | rounds to \$0 at support-group volume |
+| Model calls, per message | \$0.0013 when the screen drops it; ~\$0.0024 when classified, with prompt caching |
 
-Call it $18 a month plus a few cents a day. The catalogue sits at the end of a stable system prompt with nothing per-request before it, so Bedrock's prompt cache takes two thirds off the classify call once the KB passes about 25 entries. Set a budget alert before `apply`.
+Call it \$18 a month plus a few cents a day. The catalogue sits at the end of a stable system prompt with nothing per-request before it, so Bedrock's prompt cache takes two thirds off the classify call once the KB passes about 25 entries. Set a budget alert before `apply`.
 
 ### What could go wrong
 
@@ -208,4 +208,4 @@ If you would rather not run an unofficial client, the brain works unchanged behi
 
 One last thing. The most valuable line of code in this project is the one that decides to say nothing. If you build one of these, spend your first week on that decision, not on the answers.
 
-*Koby Almog leads developer tooling adoption at a bank in Israel and writes about making AI tools useful in regulated environments. Personal project; opinions his own.*
+*Koby Almog is a DevOps cloud engineer in Israel and writes about making AI tools useful in regulated environments. Personal project; opinions his own.*
