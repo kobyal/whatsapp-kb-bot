@@ -10,7 +10,7 @@
 *Personal project, my own time and my own AWS account. Not a product of my employer, not endorsed by WhatsApp, and it uses an unofficial WhatsApp client; section 1 explains what that means before you decide whether to run one.*
 
 ![34-second demo: group answer, group silence, direct chat](demo/demo.gif)
-*A 34-second demo with fictional people and a generic chat UI. The mp4 is in `docs/article/demo/`.*
+*A 34-second demo with fictional people and a generic chat UI. The mp4 is in `docs/media/demo/`.*
 
 ---
 

@@ -12,7 +12,7 @@ in step with it: multi-tenant, conversation-aware, with an optional 1:1 mode and
 
 ![architecture](docs/diagrams/architecture.png)
 
-**Read the article:** [How I built a WhatsApp bot that answers questions from a knowledge base on AWS](docs/article/ARTICLE.md)
+**Read the article on Medium:** *coming soon* — the write-up of how this was built, with diagrams and a short demo (`docs/media/demo/demo.mp4`).
 
 ## What you get
 

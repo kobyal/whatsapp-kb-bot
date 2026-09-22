@@ -14,3 +14,7 @@ auth/
 data/
 curator/.cache/
 .pytest_cache/
+
+# Article / post drafts are kept out of the public repo (they live on Medium / LinkedIn)
+docs/drafts/
+*.draft.md

@@ -88,7 +88,7 @@ KB_TABLE_PREFIX= CONVO_TABLE= python3 curator/curate.py --log curator/tests/fixt
   thread Tier A had fixed; the curator now declines a thread covered by an applied fix.
 - The digest also shows the 1:1 adoption line per tenant, the timeout envelope and `BRAIN ERROR`
   line as 2 brain errors, one review flag and one open gap. Rendered as
-  `docs/article/images/09-curator-digest.png`.
+  `docs/media/images/09-curator-digest.png`.
 
 Cost of the two curator runs plus the 19-case probe: well under $0.50 of Bedrock.
 
