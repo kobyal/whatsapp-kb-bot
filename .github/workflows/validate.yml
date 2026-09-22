@@ -7,11 +7,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: python3 kb/kbcheck.py
-      - run: python3 -m py_compile brain/lambda_function.py
+      - run: pip install boto3 pytest cfn-lint
+      # Every tenant's knowledge base must be clean, warnings included.
+      - run: for t in tenants/*/; do KB_TENANT=$(basename "$t") python3 kb/kbcheck.py --warnings; done
+      # tenants.json assembles, and the brain imports and passes its offline tests (no AWS).
+      - run: brain/build.sh /tmp/brain.zip
+      - run: python3 -m py_compile brain/lambda_function.py curator/curate.py curator/events.py curator/fetch_log.py kb/publish.py tools/probe.py
+      - run: python3 -m pytest brain/tests curator/tests -q
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - run: node --check listener/listener.js && node --check listener/qrserve.js
+      - run: cd listener && npm ci --omit=dev --no-audit --no-fund
       - uses: hashicorp/setup-terraform@v3
       - run: terraform -chdir=infra/terraform init -backend=false && terraform -chdir=infra/terraform validate && terraform -chdir=infra/terraform fmt -check
-      - run: pip install cfn-lint && cfn-lint infra/cloudformation/template.yaml
+      - run: cfn-lint infra/cloudformation/template.yaml

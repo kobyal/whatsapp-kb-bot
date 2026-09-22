@@ -5,9 +5,15 @@ variable "aws_region" {
 }
 
 variable "name_prefix" {
-  description = "Prefix for every resource name, so several bots can share an account."
+  description = "Prefix for every resource name, so several bots can share an account. KB tables are <prefix>-kb-<tenant id>."
   type        = string
   default     = "wakb"
+}
+
+variable "default_tenant" {
+  description = "The tenant (a folder under tenants/) that answers a group not claimed by any tenant.json. With one tenant this is simply it."
+  type        = string
+  default     = "dev-platform"
 }
 
 variable "allowed_groups" {
@@ -16,10 +22,22 @@ variable "allowed_groups" {
   default     = []
 }
 
-variable "allow_dms" {
-  description = "Also answer 1:1 chats sent to the bot number."
+variable "dm_enabled" {
+  description = "1:1 mode. When true, members of the groups in dm_roster_groups may message the bot directly. Strangers are dropped in silence."
   type        = bool
   default     = false
+}
+
+variable "dm_roster_groups" {
+  description = "Group jid -> tenant id. Members of each group may DM the bot and get that tenant's KB. Must be jids (the roster is read with groupMetadata)."
+  type        = map(string)
+  default     = {}
+}
+
+variable "call_words" {
+  description = "A message starting with one of these words is an explicit call to the bot (always answered, if only with the no-match text)."
+  type        = list(string)
+  default     = ["bot", "בוט"]
 }
 
 variable "repo_url" {
@@ -41,7 +59,7 @@ variable "instance_type" {
 }
 
 variable "classify_model" {
-  description = "Bedrock model id or inference profile used to pick the KB entry. Small and cheap is right here."
+  description = "Bedrock model id or inference profile used for the screen and to pick the KB entry. Small and cheap is right here."
   type        = string
   default     = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
@@ -53,9 +71,27 @@ variable "vision_model" {
 }
 
 variable "min_confidence" {
-  description = "Below this classifier confidence the bot stays silent. 0.85 is a sane start; raise it if you see wrong answers."
+  description = "At or above this classifier confidence the bot answers. 0.85 is a sane start; the production bot measured and moved to 0.90."
   type        = number
   default     = 0.85
+}
+
+variable "clarify_min_candidate" {
+  description = "From here up to min_confidence the bot asks ONE fixed clarifying question instead of answering. Below it, silence."
+  type        = number
+  default     = 0.70
+}
+
+variable "clarify_enabled" {
+  description = "Turn the clarifying question off entirely (silence below the floor, as in the first version of this template)."
+  type        = bool
+  default     = true
+}
+
+variable "supporter_window_seconds" {
+  description = "After one of a tenant's supporters speaks in a group, the bot withholds clarifying questions there for this long."
+  type        = number
+  default     = 180
 }
 
 variable "answer_mode" {
@@ -68,12 +104,6 @@ variable "answer_mode" {
   }
 }
 
-variable "bot_header" {
-  description = "First line of every reply, so people know it came from a bot."
-  type        = string
-  default     = "🤖 _Automated answer from the support bot_"
-}
-
 variable "vpc_cidr" {
   description = "CIDR of the small dedicated VPC created for the listener."
   type        = string
@@ -81,7 +111,7 @@ variable "vpc_cidr" {
 }
 
 variable "disable_api_stop" {
-  description = "Stop protection. Turn on if your account runs an instance scheduler or a cost enforcer that stops instances: they must call StopInstances first, and this makes that fail."
+  description = "Stop protection. Turn on if your account runs an instance scheduler or a cost enforcer that stops instances: they must call StopInstances first, and this makes that fail. NOTE: it also blocks `terraform destroy` until turned off."
   type        = bool
   default     = false
 }
@@ -93,7 +123,7 @@ variable "ignore_tag_keys" {
 }
 
 variable "disable_api_termination" {
-  description = "Protect the listener from accidental termination (and from account-wide instance schedulers that stop first)."
+  description = "Protect the listener from accidental termination."
   type        = bool
   default     = false
 }

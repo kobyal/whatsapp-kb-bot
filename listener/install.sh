@@ -5,8 +5,10 @@
 # Required env (written to /etc/wakb.env by the infra, or export them yourself):
 #   BRAIN_FUNCTION  name of the brain Lambda
 #   AWS_REGION      region of that Lambda
-#   ALLOWED_GROUPS  comma-separated group jids or group subjects the bot may answer in
-#   ALLOW_DMS       1 to also answer 1:1 chats (default 0)
+#   ALLOWED_GROUPS    comma-separated group jids or group subjects the bot may answer in
+#   DM_ENABLED        1 to answer 1:1 messages from members of DM_ROSTER_GROUPS (default 0)
+#   DM_ROSTER_GROUPS  comma-separated <group jid>=<tenant id> pairs
+#   CALL_WORDS        words that address the bot (default "bot,בוט")
 #   REPO_URL / GIT_REF  where to fetch this repo from (default: GitHub main)
 set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/kobyal/whatsapp-kb-bot.git}"
@@ -40,7 +42,9 @@ DATA_DIR=/opt/wakb/data
 BRAIN_FUNCTION=${BRAIN_FUNCTION:-wakb-brain}
 AWS_REGION=${AWS_REGION:-eu-west-1}
 ALLOWED_GROUPS="${ALLOWED_GROUPS:-}"
-ALLOW_DMS=${ALLOW_DMS:-0}
+DM_ENABLED=${DM_ENABLED:-0}
+DM_ROSTER_GROUPS="${DM_ROSTER_GROUPS:-}"
+CALL_WORDS="${CALL_WORDS:-bot,בוט}"
 ENV
   chmod 640 /etc/wakb.env
 fi

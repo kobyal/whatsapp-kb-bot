@@ -1,0 +1,65 @@
+[2026-09-22T05:32:44.489Z] IN  120363000000000001@g.us 100000000000031@lid: good morning all
+[2026-09-22T05:32:45.207Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; kb dynamodb (17); screen request=False domain=off kind=other ask=None; not a request for help -> silent (no classification attempted); usage in=1210 out=31 cache_read=0 calls=1
+[2026-09-22T05:32:45.207Z] no reply (outcome=silent) - staying silent
+[2026-09-22T05:40:00.000Z] drop: jid=120363999999999999@g.us subject="Family" (not allowlisted)
+[2026-09-22T06:10:00.000Z] upsert type=notify n=1 jids=["120363000000000002@g.us"] fromMe=[false] kinds=[["conversation"]]
+[2026-09-22T06:10:00.100Z] IN  100000000000050@lid: git push says authentication failed
+[2026-09-22T06:10:02.000Z] BRAIN matched=true id=git_pat_auth_failed score=0.95
+[2026-09-22T06:10:05.000Z] OUT sent answer git_pat_auth_failed (611 chars)
+[2026-09-22T06:56:04.350Z] IN  120363000000000012@g.us 100000000000050@lid: לא עולה
+[2026-09-22T06:56:06.328Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; kb dynamodb (4); screen request=True domain=on kind=underspecified ask=error; classify none 0.00 (too vague); clarify: route 2 (underspecified) disabled for this tenant; clarify: no route (near miss 0.0 < 0.7, kind=underspecified) -> silent; usage in=4100 out=60 cache_read=3200 calls=2
+[2026-09-22T06:56:06.328Z] no reply (outcome=silent) - staying silent
+[2026-09-22T07:40:10.000Z] IN  120363000000000011@g.us 100000000000041@lid: אאוטלוק מבקש ממני להתחבר כל פעם מחדש
+[2026-09-22T07:40:12.100Z] BRAIN tenant=office-it outcome=answer matched=true id=outlook_keeps_asking_to_sign_in score=0.95 | tenant=office-it; kb dynamodb (4); screen request=True domain=on kind=specific ask=None; classify outlook_keeps_asking_to_sign_in 0.95 (repeated sign-in prompt in Outlook); usage in=4300 out=70 cache_read=3200 calls=2
+[2026-09-22T07:40:15.400Z] OUT sent answer outlook_keeps_asking_to_sign_in (438 chars)
+[2026-09-22T07:41:02.000Z] IN  120363000000000011@g.us 100000000000011@lid: ראיתי, אני איתך על זה
+[2026-09-22T07:41:02.050Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; supporter: one of the group's own answerers is talking -> silent; usage in=0 out=0 cache_read=0 calls=0
+[2026-09-22T07:41:02.050Z] no reply (outcome=silent) - staying silent
+[2026-09-22T08:10:00.000Z] IN  120363000000000011@g.us 100000000000042@lid: המסך של הזום קפוא, מישהו יודע?
+[2026-09-22T08:10:01.900Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; kb dynamodb (4); screen request=True domain=on kind=specific ask=None; classify none 0.00 (no entry about Zoom); clarify: no route (near miss 0.0 < 0.7, kind=specific) -> silent; usage in=4200 out=55 cache_read=3200 calls=2
+[2026-09-22T08:10:01.900Z] no reply (outcome=silent) - staying silent
+[2026-09-22T08:32:10.000Z] IN  120363000000000001@g.us 100000000000031@lid: vpn drops every time I close the laptop lid, anyone?
+[2026-09-22T08:32:12.300Z] BRAIN tenant=dev-platform outcome=clarify matched=false id=null score=0 | tenant=dev-platform; kb dynamodb (17); screen request=True domain=on kind=specific ask=env; classify vpn_not_connecting 0.80 (VPN drops, not the documented failure); below floor 0.85: suppressed vpn_not_connecting; clarify: route=candidate ask=env; usage in=5400 out=80 cache_read=4900 calls=2
+[2026-09-22T08:32:15.700Z] OUT sent clarify  (176 chars)
+[2026-09-22T08:33:05.000Z] IN  120363000000000001@g.us 100000000000001@lid: quit the vpn client from the tray and reopen it, and make sure you are on the corp-remote profile
+[2026-09-22T08:33:05.040Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; supporter: one of the group's own answerers is talking -> silent; usage in=0 out=0 cache_read=0 calls=0
+[2026-09-22T08:33:05.040Z] no reply (outcome=silent) - staying silent
+[2026-09-22T08:35:40.000Z] IN  120363000000000001@g.us 100000000000031@lid: works now, thanks
+[2026-09-22T08:35:41.100Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; kb dynamodb (17); screen request=False domain=on kind=other ask=None; not a request for help -> silent (no classification attempted); usage in=1230 out=30 cache_read=1100 calls=1
+[2026-09-22T08:35:41.100Z] no reply (outcome=silent) - staying silent
+[2026-09-22T09:13:08.000Z] IN  120363000000000002@g.us 100000000000050@lid: got it, thanks a lot!
+[2026-09-22T09:14:08.100Z] BRAIN tenant=? outcome=undefined matched=false id=undefined score=undefined |
+[2026-09-22T09:14:08.100Z] no reply (outcome=undefined) - staying silent
+[2026-09-22T09:14:00.000Z] IN  120363000000000012@g.us 100000000000050@lid: בטימס לא שומעים אותי, המיקרופון לא עובד
+[2026-09-22T09:14:02.000Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; kb dynamodb (4); screen request=True domain=on kind=specific ask=None; classify none 0.00 (no microphone entry); clarify: no route (near miss 0.0 < 0.7, kind=specific) -> silent; usage in=4200 out=55 cache_read=3200 calls=2
+[2026-09-22T09:14:02.000Z] no reply (outcome=silent) - staying silent
+[2026-09-22T09:15:30.000Z] IN  120363000000000012@g.us 100000000000050@lid: בודקים בהגדרות מכשירים בטימס שהמיקרופון הנכון נבחר, ואם לא עוזר מנתקים ומחברים את האוזניות
+[2026-09-22T09:15:31.500Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; kb dynamodb (4); screen request=False domain=on kind=other ask=None; not a request for help -> silent (no classification attempted); usage in=1240 out=30 cache_read=1100 calls=1
+[2026-09-22T09:15:31.500Z] no reply (outcome=silent) - staying silent
+[2026-09-22T09:16:40.000Z] IN  120363000000000012@g.us 100000000000050@lid: עבד, תודה
+[2026-09-22T09:16:41.000Z] BRAIN tenant=office-it outcome=silent matched=false id=null score=0 | tenant=office-it; kb dynamodb (4); screen request=False domain=on kind=other ask=None; not a request for help -> silent (no classification attempted); usage in=1230 out=30 cache_read=1100 calls=1
+[2026-09-22T09:16:41.000Z] no reply (outcome=silent) - staying silent
+[2026-09-22T09:20:00.000Z] IN  120363000000000002@g.us 100000000000050@lid: error test message, please time out
+[2026-09-22T09:20:26.000Z] BRAIN ERROR Unhandled: {"errorMessage":"2026-09-22T09:20:26.000Z 3f1c Task timed out after 60.00 seconds"}
+[2026-09-22T10:17:02.000Z] IN  120363000000000001@g.us 100000000000032@lid: the trace viewer shows nothing for my service since yesterday
+[2026-09-22T10:17:04.200Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; kb dynamodb (17); screen request=True domain=on kind=specific ask=None; classify none 0.00 (no tracing entry); clarify: no route (near miss 0.0 < 0.7, kind=specific) -> silent; usage in=5300 out=60 cache_read=4900 calls=2
+[2026-09-22T10:17:04.200Z] no reply (outcome=silent) - staying silent
+[2026-09-22T10:18:11.000Z] IN  120363000000000001@g.us 100000000000032@lid:  [+image]
+[2026-09-22T10:18:20.900Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; vision: the screen shows an empty trace list with the filter set to the last 24 hours, nothing wrong visible; kb dynamodb (17); screen request=True domain=on kind=specific ask=None; classify none 0.00; usage in=6100 out=90 cache_read=4900 calls=3
+[2026-09-22T10:18:20.900Z] no reply (outcome=silent) - staying silent
+[2026-09-22T10:18:21.000Z] skip: duplicate delivery of 3EB0ABCDEF in 120363000000000001@g.us
+[2026-09-22T10:20:30.000Z] IN  120363000000000001@g.us 100000000000033@lid: the trace viewer needs the new sdk, run devctl update and redeploy the service
+[2026-09-22T10:20:31.200Z] BRAIN tenant=dev-platform outcome=silent matched=false id=null score=0 | tenant=dev-platform; kb dynamodb (17); screen request=False domain=on kind=other ask=None; not a request for help -> silent (no classification attempted); usage in=1250 out=30 cache_read=1100 calls=1
+[2026-09-22T10:20:31.200Z] no reply (outcome=silent) - staying silent
+[2026-09-22T11:00:00.000Z] IN  DM 100000000000050@lid: outlook asks me to sign in again and again [tenants:dev-platform|office-it]
+[2026-09-22T11:00:01.000Z] BRAIN tenant=? outcome=dm_setup matched=false id=null score=0 | dm: in more than one tenant and no choice stored -> asking
+[2026-09-22T11:00:04.000Z] OUT sent dm_setup  (152 chars)
+[2026-09-22T11:00:30.000Z] IN  DM 100000000000050@lid: 2 [tenants:dev-platform|office-it]
+[2026-09-22T11:00:31.000Z] BRAIN tenant=office-it outcome=dm_setup matched=false id=null score=0 | dm: tenant set to office-it
+[2026-09-22T11:00:34.000Z] OUT sent dm_setup  (81 chars)
+[2026-09-22T11:01:00.000Z] IN  DM 100000000000050@lid: outlook asks me to sign in again and again [tenants:dev-platform|office-it]
+[2026-09-22T11:01:02.000Z] BRAIN tenant=office-it outcome=answer matched=true id=outlook_keeps_asking_to_sign_in score=0.95 | tenant=office-it; explicit call; kb dynamodb (4); screen skipped: explicit call; classify outlook_keeps_asking_to_sign_in 0.95 (repeated sign-in prompt); usage in=3100 out=60 cache_read=2200 calls=1
+[2026-09-22T11:01:06.000Z] OUT sent answer outlook_keeps_asking_to_sign_in (438 chars)
+[2026-09-22T11:05:00.000Z] IN  DM 100000000000051@lid: how do I connect to the data warehouse from the cli [tenants:dev-platform]
+[2026-09-22T11:05:02.000Z] BRAIN tenant=dev-platform outcome=nomatch matched=false id=null score=0 | tenant=dev-platform; explicit call; kb dynamodb (17); screen skipped: explicit call; classify none 0.00 (no data warehouse entry); explicit call with no answer -> fixed no-match text; usage in=4100 out=50 cache_read=3900 calls=1
+[2026-09-22T11:05:05.000Z] OUT sent nomatch  (211 chars)

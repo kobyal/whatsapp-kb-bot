@@ -7,10 +7,13 @@ DATA_DIR=/opt/wakb/data
 BRAIN_FUNCTION=${brain_function}
 AWS_REGION=${aws_region}
 ALLOWED_GROUPS="${allowed_groups}"
-ALLOW_DMS=${allow_dms}
+DM_ENABLED=${dm_enabled}
+DM_ROSTER_GROUPS="${dm_roster_groups}"
+CALL_WORDS="${call_words}"
 ENV
 chmod 640 /etc/wakb.env
 
+# AL2023 first boot holds the rpm lock for a while: retry instead of dying.
 for i in $(seq 1 10); do dnf install -y -q git && break; echo "dnf busy, retry $i"; sleep 10; done
 export REPO_URL="${repo_url}" GIT_REF="${git_ref}"
 git clone -q --depth 1 --branch "$GIT_REF" "$REPO_URL" /tmp/wakb-src

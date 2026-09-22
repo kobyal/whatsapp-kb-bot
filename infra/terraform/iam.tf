@@ -38,7 +38,7 @@ resource "aws_iam_instance_profile" "listener" {
   role = aws_iam_role.listener.name
 }
 
-# ---- Lambda brain role: logs, Bedrock invoke, read the KB table --------------------------
+# ---- Lambda brain role: logs, Bedrock invoke, read every KB table, read/write convo state --
 
 data "aws_iam_policy_document" "lambda_assume" {
   statement {
@@ -61,7 +61,7 @@ resource "aws_iam_role_policy_attachment" "brain_logs" {
 }
 
 resource "aws_iam_role_policy" "brain" {
-  name = "bedrock-and-kb"
+  name = "bedrock-kb-convo"
   role = aws_iam_role.brain.id
   policy = jsonencode({
     Version = "2012-10-17"
@@ -79,7 +79,12 @@ resource "aws_iam_role_policy" "brain" {
       {
         Effect   = "Allow"
         Action   = ["dynamodb:Scan"]
-        Resource = aws_dynamodb_table.kb.arn
+        Resource = [for t in aws_dynamodb_table.kb : t.arn]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
+        Resource = aws_dynamodb_table.convo.arn
       },
     ]
   })

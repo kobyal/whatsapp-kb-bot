@@ -1,0 +1,88 @@
+{
+  "entries": [
+    {
+      "id": "outlook_keeps_asking_to_sign_in",
+      "category": "outlook",
+      "status": "published",
+      "triggers": [
+        "אאוטלוק מבקש להתחבר כל הזמן",
+        "outlook keeps asking me to sign in",
+        "יש שורה צהובה באאוטלוק שמבקשת התחברות",
+        "outlook needs password every time I open it",
+        "אאוטלוק לא מסנכרן מיילים",
+        "outlook stuck on connecting"
+      ],
+      "error_strings": [
+        "Need password. Click here to enter your password",
+        "We need your current credentials"
+      ],
+      "answer": "אם Outlook מבקש להתחבר שוב ושוב, הסיסמה השמורה במחשב ישנה. הפתרון:\n1. סוגרים את Outlook לגמרי.\n2. פותחים *מנהל האישורים* (Credential Manager) בחיפוש של Windows, בוחרים *אישורי Windows* ומוחקים כל שורה שמתחילה ב-MicrosoftOffice.\n3. פותחים את Outlook מחדש ומתחברים פעם אחת עם הסיסמה החדשה.\n\nאם השורה הצהובה חוזרת גם אחרי זה, כותבים כאן צילום מסך שלה.",
+      "owner": "צוות המחשוב",
+      "source": "WhatsApp group 'Office IT Help', 2026-09-11",
+      "verified_against": "Thread 2026-09-11 08:30-08:52: asker sent a screenshot of the yellow 'Need password' bar; IT on-call sent the Credential Manager steps; asker replied 'עובד, תודה' at 08:52.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "teams_camera_black_screen",
+      "category": "teams",
+      "status": "published",
+      "triggers": [
+        "המצלמה בטימס שחורה",
+        "teams camera shows a black screen",
+        "לא רואים אותי בטימס",
+        "camera not working in teams",
+        "טימס לא מוצא את המצלמה",
+        "teams says no camera found"
+      ],
+      "error_strings": [
+        "We can't find your camera. Check that it's connected and installed"
+      ],
+      "answer": "מצלמה שחורה או *לא נמצאה מצלמה* בטימס:\n1. סוגרים כל תוכנה אחרת שמשתמשת במצלמה (זום, הדפדפן).\n2. בטימס: *הגדרות* > *מכשירים* > בוחרים את המצלמה מהרשימה, גם אם היא כבר מסומנת.\n3. אם עדיין שחור, מנתקים ומחברים את המצלמה (או סוגרים ופותחים את המכסה במחשב נייד) ומנסים שוב.\n\nאם הבעיה גם בתוכנות אחרות, זו המצלמה עצמה ולא טימס, ופותחים קריאה.",
+      "owner": "צוות המחשוב",
+      "source": "WhatsApp group 'Office IT Help', 2026-09-13",
+      "verified_against": "Thread 2026-09-13 10:00-10:14: asker reported a black camera before a meeting; IT on-call sent the device-settings steps; asker confirmed 'רואים אותי' at 10:14.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "printer_not_found",
+      "category": "printing",
+      "status": "published",
+      "triggers": [
+        "המדפסת לא מופיעה",
+        "printer not showing up",
+        "איך מוסיפים את המדפסת של הקומה",
+        "can't print to the floor printer",
+        "המדפסת אופליין",
+        "printer says offline"
+      ],
+      "error_strings": [
+        "Printer offline",
+        "Windows can't find a printer"
+      ],
+      "answer": "מדפסת שלא מופיעה או מסומנת *לא מקוונת*:\n1. בודקים שאתם מחוברים לרשת המשרד (לא לרשת האורחים ולא רק ל-VPN).\n2. בחיפוש של Windows כותבים *מדפסות וסורקים*, לוחצים *הוסף התקן* ובוחרים את המדפסת של הקומה (השם מתחיל במספר הקומה).\n3. אם היא לא ברשימה, כותבים בשורת הכתובת `\\\\print-server` ולוחצים פעמיים על המדפסת.\n\nמדפסת שמופיעה אבל התור תקוע: מבטלים את כל המסמכים בתור ומדפיסים שוב.",
+      "owner": "צוות המחשוב",
+      "source": "WhatsApp group 'Office IT Help', 2026-09-09",
+      "verified_against": "Thread 2026-09-09 14:20-14:35: asker on the guest Wi-Fi could not see the floor printer; IT on-call pointed to the office network and the add-device steps; asker confirmed printing after switching networks.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "wifi_guest_vs_corp",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "לאיזה wifi להתחבר במשרד",
+        "which wifi should I use",
+        "guest wifi doesn't reach internal sites",
+        "רשת האורחים לא נותנת גישה לאתרים פנימיים",
+        "corp wifi password",
+        "wifi keeps asking for a certificate"
+      ],
+      "error_strings": [],
+      "answer": "במשרד יש שתי רשתות אלחוטיות:\n- *Corp*: מתחברים עם שם המשתמש והסיסמה של החברה. רק ממנה יש גישה למדפסות ולאתרים הפנימיים.\n- *Guest*: לאורחים ולטלפונים פרטיים, אינטרנט בלבד.\n\nאם רשת Corp מבקשת אישור תעודה, לוחצים *התחבר*; זו תעודת החברה.\nמחשב של החברה שלא רואה את Corp בכלל: מפעילים מחדש את המחשב ואם זה לא עוזר פותחים קריאה.",
+      "owner": "צוות המחשוב",
+      "source": "Office network guide, checked 2026-09-15",
+      "verified_against": "Thread 2026-09-08 09:05-09:10: new employee asked which network to join; a peer explained Corp vs Guest; the asker confirmed internal sites opened on Corp.",
+      "last_verified": "2026-09-15"
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+{
+  "entries": [
+    {
+      "id": "vpn_not_connecting",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "vpn won't connect",
+        "vpn keeps disconnecting",
+        "הVPN לא מתחבר",
+        "vpn stuck on connecting",
+        "can't reach internal sites from home",
+        "הvpn נופל כל כמה דקות"
+      ],
+      "error_strings": [
+        "The VPN connection failed due to unsuccessful domain name resolution",
+        "Connection attempt has timed out. Please verify Internet connectivity"
+      ],
+      "answer": "VPN will not connect, or keeps dropping. Checklist, in this order:\n1. Quit the VPN client completely (right-click the tray icon, *Quit*), then reopen it. Disconnect alone is not enough.\n2. Make sure the profile is *Corp-Remote*, not *Corp-Guest*. Guest has no route to internal sites.\n3. Toggle Wi-Fi off and on. Hotel and cafe networks often block UDP 443; a phone hotspot proves it in one minute.\n4. If the error mentions domain name resolution, restart the laptop once. The client's DNS filter survives a plain reconnect.\n\nOnly a VPN problem is covered here. If VPN is up but one site is blocked, that is the proxy: see the web-proxy answer.",
+      "owner": "network on-call",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-09-02",
+      "verified_against": "Thread 2026-09-02 09:14-09:31: asker reported the DNS-resolution error after moving to a hotel network; the network on-call answered with steps 1-4; asker replied 'restart did it, connected' at 09:31.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "sso_session_expires_every_4h",
+      "category": "auth",
+      "status": "published",
+      "triggers": [
+        "asked to sign in again every few hours",
+        "sso logs me out every 4 hours",
+        "כל כמה שעות מבקש להתחבר מחדש",
+        "why do I have to log in again",
+        "session expired sign in again",
+        "למה אני צריך להתחבר שוב ושוב"
+      ],
+      "error_strings": [
+        "Your session has expired. Please sign in again to continue"
+      ],
+      "answer": "Being asked to sign in again every ~4 hours is the conditional-access policy, not a fault.\nSessions on laptops that are not company-managed are capped at 4 hours; managed laptops get 8. There is no setting on your side.\n\nWhat makes it painless:\n1. Let the browser keep you signed in when it asks (*Stay signed in? Yes*), so the prompt is one click, not a password.\n2. Keep the authenticator app on the phone you carry. Number-matching MFA is faster than SMS.\n\nThis is different from being thrown back to the login page immediately after signing in. That is a stale browser session: see the sign-in-loop answer.",
+      "owner": "identity team",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-08-27; policy confirmed with the identity team",
+      "verified_against": "Thread 2026-08-27 11:02-11:20: asker asked why the portal signs them out 'every few hours'; identity team explained the 4-hour cap for unmanaged devices; asker confirmed their laptop was personal and accepted the answer.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "sso_login_loop_stale_session",
+      "category": "auth",
+      "status": "published",
+      "triggers": [
+        "sign in loops back to the login page",
+        "AADSTS70043",
+        "login page comes back right after I sign in",
+        "מתחבר ומיד זורק אותי חזרה לדף ההתחברות",
+        "sso redirect loop",
+        "keeps asking for my password in a loop"
+      ],
+      "error_strings": [
+        "AADSTS70043: The refresh token has expired or is invalid due to sign-in frequency checks by conditional access",
+        "AADSTS50058: A silent sign-in request was sent but no user is signed in"
+      ],
+      "answer": "A sign-in that loops straight back to the login page is a stale browser session, and the fix is to clear it, not to retype the password.\n1. Close every tab of the portal.\n2. In the browser, clear cookies for the login domain only (Settings > Privacy > Cookies > See all > search the company login domain > Remove).\n3. Open the portal again in a fresh tab and sign in.\n\nIf the loop is inside the IDE extension rather than the browser, sign out of the extension first (*Devplatform: Sign out* in the command palette), then repeat.\n\nA prompt that comes back every few hours and then works is the normal session cap, not this.",
+      "owner": "identity team",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-09-08",
+      "verified_against": "Thread 2026-09-08 16:40-16:55: asker pasted the AADSTS70043 text and said sign-in 'keeps bouncing'; a platform on-call sent the cookie-clearing steps; asker replied 'that was it, in' at 16:55.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "proxy_403_site_blocked",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "site blocked by the proxy",
+        "proxy blocks the download",
+        "403 from the corporate proxy",
+        "הפרוקסי חוסם לי את האתר",
+        "can't download from github releases",
+        "blocked category web filter"
+      ],
+      "error_strings": [
+        "The request was blocked by the corporate web proxy (category: Uncategorized)",
+        "Access to this site is restricted by your organization's web filter policy"
+      ],
+      "answer": "A page or download blocked by the corporate web proxy shows the web-filter block page, or a 403 in a terminal.\n1. Check the category on the block page. *Uncategorized* is the usual one for new release CDNs.\n2. Ask for the URL to be allowed: open a ticket in the *Network Access* queue with the exact URL and what it is for. Turnaround is usually the same day.\n3. Meanwhile, `devctl fetch <url>` downloads through the platform mirror for the allow-listed tool sources.\n\nA dialog that asks for a proxy username and password is a different problem: see the proxy-authentication answer.",
+      "owner": "network on-call",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-09-05",
+      "verified_against": "Thread 2026-09-05 13:12-13:40: asker posted a screenshot of the block page for a release CDN; network on-call replied with the ticket queue and the `devctl fetch` workaround; asker confirmed the mirror download worked.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "proxy_auth_dialog_407",
+      "category": "network",
+      "status": "published",
+      "triggers": [
+        "proxy asks for username and password",
+        "407 proxy authentication required",
+        "the IDE keeps popping a proxy login dialog",
+        "חלון של פרוקסי מבקש שם משתמש וסיסמה",
+        "proxy credentials popup every minute",
+        "git behind proxy asks for auth"
+      ],
+      "error_strings": [
+        "407 Proxy Authentication Required",
+        "Proxy Authentication Required. The proxy server requires credentials"
+      ],
+      "answer": "A proxy username-and-password dialog, or a 407 in a terminal, means the tool is going to the proxy directly instead of through the platform agent.\n1. Check the agent is running: `devctl doctor` prints *proxy agent: running* when it is.\n2. If it is not, start it: `devctl agent start`.\n3. In the IDE, set the proxy to `http://127.0.0.1:3128` (Settings > Proxy), which is the agent.\nNever type your password into the dialog; the IDE does not store it safely.\n\nA page that is refused with a block page and no credentials prompt is a filter block, not this.",
+      "owner": "network on-call",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-09-10",
+      "verified_against": "Thread 2026-09-10 10:05-10:22: asker reported the IDE popping a proxy dialog 'every minute'; platform on-call asked for `devctl doctor` output, saw the agent stopped, sent `devctl agent start`; asker replied 'dialog gone'.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "cli_install_windows",
+      "category": "cli",
+      "status": "published",
+      "triggers": [
+        "how do I install devctl on windows",
+        "devctl is not recognized",
+        "איך מתקינים את devctl על ווינדוס",
+        "install the cli on windows",
+        "devctl not found after install windows",
+        "windows install instructions for the platform tool"
+      ],
+      "error_strings": [
+        "'devctl' is not recognized as an internal or external command, operable program or batch file"
+      ],
+      "answer": "Installing `devctl` on Windows:\n1. Open PowerShell (not as administrator) and run `winget install Company.Devctl`.\n2. Close that PowerShell window and open a new one. The PATH change is only picked up by new windows.\n3. Run `devctl --version` to confirm.\n\nIf step 3 says *not recognized* in a new window, the installer put it in `%LOCALAPPDATA%\\Programs\\devctl`.\nAdd that folder to your user PATH and open yet another window.\n\nmacOS and Linux use Homebrew instead: see the macOS install answer.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Install devctl', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-01 08:50-09:05: asker pasted the 'not recognized' error right after installing; a peer answered 'open a new terminal'; asker confirmed `devctl --version` printed 2.14.0 in the new window.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "cli_install_macos",
+      "category": "cli",
+      "status": "published",
+      "triggers": [
+        "how do I install devctl on mac",
+        "command not found: devctl",
+        "איך מתקינים את devctl על מק",
+        "brew install for the platform cli",
+        "devctl on macos",
+        "install the cli on linux"
+      ],
+      "error_strings": [
+        "zsh: command not found: devctl",
+        "bash: devctl: command not found"
+      ],
+      "answer": "Installing `devctl` on macOS or Linux:\n1. `brew tap company/devplatform`\n2. `brew install devctl`\n3. `devctl --version`\n\nIf Homebrew itself is missing, install it from brew.sh first. On Linux the tap works with Linuxbrew the same way.\nIf step 3 says *command not found*, run `brew doctor`; the usual cause is that the Homebrew bin folder is not on PATH in your shell profile.\n\nWindows uses winget instead: see the Windows install answer.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Install devctl', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-04 15:30-15:41: asker on a new MacBook got 'command not found'; platform on-call sent the two brew commands; asker replied with a screenshot of `devctl --version` working.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "cli_which_version_and_update",
+      "category": "cli",
+      "status": "published",
+      "triggers": [
+        "which version of devctl is current",
+        "how do I update devctl",
+        "מה הגרסה העדכנית של devctl",
+        "am I on the latest version",
+        "devctl update",
+        "is there a new version out"
+      ],
+      "error_strings": [
+        "A newer version of devctl is available. Run 'devctl update'"
+      ],
+      "answer": "Which `devctl` version is current, and how to update:\n1. `devctl --version` prints yours.\n2. `devctl update` fetches the current release; it prints the version it installed.\n\nRelease notes are pinned in the group description. If `devctl update` itself fails behind the proxy, run `devctl agent start` first.\nThe platform team announces every release here, so if you were not told about a version, you do not need it yet.",
+      "owner": "platform-team",
+      "source": "Platform release process, checked 2026-09-15",
+      "verified_against": "Thread 2026-09-11 12:00-12:04: asker asked 'is 2.15 out?'; platform on-call replied that `devctl update` is the source of truth; asker ran it and confirmed 2.15.1 installed.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "docker_daemon_not_running",
+      "category": "docker",
+      "status": "published",
+      "triggers": [
+        "cannot connect to the docker daemon",
+        "docker says the daemon is not running",
+        "docker commands fail on my laptop",
+        "הדוקר לא עולה",
+        "is the docker daemon running",
+        "docker desktop not starting"
+      ],
+      "error_strings": [
+        "Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?",
+        "error during connect: this error may indicate that the docker daemon is not running"
+      ],
+      "answer": "*Cannot connect to the Docker daemon* means Docker Desktop is not running or is still starting.\n1. Open Docker Desktop and wait for the whale icon to stop animating (up to two minutes after login).\n2. Run `docker info`. It should print server details, not an error.\n3. If Docker Desktop will not start at all, quit it from the tray icon and run `devctl doctor`; it reports the WSL or virtualisation setting that is off.\n\nA pull that fails with *unauthorized* while `docker info` works is a registry login problem, not this.",
+      "owner": "platform-team",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-08-29",
+      "verified_against": "Thread 2026-08-29 09:40-09:47: asker posted a screenshot of the daemon error from a terminal; a peer replied 'Docker Desktop is not open'; asker confirmed after opening it and waiting.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "docker_pull_unauthorized_registry",
+      "category": "docker",
+      "status": "published",
+      "triggers": [
+        "docker pull says unauthorized",
+        "can't pull from the internal registry",
+        "registry login for docker",
+        "unauthorized authentication required docker",
+        "איך מתחברים לרג'יסטרי הפנימי",
+        "docker login to the company registry"
+      ],
+      "error_strings": [
+        "unauthorized: authentication required",
+        "denied: requested access to the resource is denied"
+      ],
+      "answer": "*unauthorized: authentication required* on `docker pull` from the internal registry means your registry token has expired (they last 12 hours).\n1. `devctl registry login`\n2. Retry the pull.\n\nDo not use `docker login` with your password; the registry only accepts the short-lived token that `devctl` issues.\nIf you can pull public images but not internal ones, the same command fixes it.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Container registry', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-09 17:15-17:20: asker pasted the unauthorized error; platform on-call replied with `devctl registry login`; asker confirmed the pull went through.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "git_pat_auth_failed",
+      "category": "git",
+      "status": "published",
+      "triggers": [
+        "git push says authentication failed",
+        "git asks for a password and rejects it",
+        "personal access token for git",
+        "remote: Authentication failed",
+        "הגיט לא נותן לי לדחוף שינויים",
+        "how do I create a PAT for git"
+      ],
+      "error_strings": [
+        "remote: Authentication failed for 'https://git.example.internal/'",
+        "remote: Support for password authentication was removed. Please use a personal access token instead"
+      ],
+      "answer": "*Authentication failed* on `git push` or `git clone` means git is sending a password where the server expects a personal access token (PAT).\n1. Create a PAT: profile picture > *Personal access tokens* > *Generate*, scope *repo*, expiry 90 days.\n2. Store it once: `devctl git login` prompts for the token and saves it in the OS credential store.\n3. Retry the push. Git will not ask again until the token expires.\n\nAn error about an SSL certificate is a different problem: see the certificate answer.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Git access', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-03 14:10-14:25: asker pasted 'Authentication failed' after a laptop rebuild; a peer explained passwords are no longer accepted and sent the PAT steps; asker confirmed 'push went through'.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "git_ssl_certificate_problem",
+      "category": "git",
+      "status": "published",
+      "triggers": [
+        "ssl certificate problem unable to get local issuer certificate",
+        "git clone fails with a certificate error",
+        "self signed certificate in certificate chain",
+        "curl says the certificate is not trusted",
+        "בעיית תעודה בגיט",
+        "SSL error behind the proxy"
+      ],
+      "error_strings": [
+        "SSL certificate problem: unable to get local issuer certificate",
+        "self-signed certificate in certificate chain"
+      ],
+      "answer": "*SSL certificate problem: unable to get local issuer certificate* means the tool does not trust the corporate proxy's root certificate.\n1. `devctl certs install` puts the corporate root CA into the stores that git, curl, Node and Python read.\n2. Open a new terminal and retry.\n\nNever set `http.sslVerify false`; it hides the problem and is flagged by the security scan.\nIf only one tool still complains after step 1, `devctl doctor` names the store it could not write to.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Corporate root CA', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-12 10:30-10:50: asker got the certificate error on a fresh Linux VM; platform on-call sent `devctl certs install`; asker confirmed clone succeeded in a new shell.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "ide_extension_fails_to_activate",
+      "category": "ide",
+      "status": "published",
+      "triggers": [
+        "the platform extension won't activate in vs code",
+        "extension activation failed",
+        "the devplatform extension is grey and does nothing",
+        "התוסף בvs code לא נטען",
+        "command 'devplatform.connect' not found",
+        "extension can't reach the marketplace"
+      ],
+      "error_strings": [
+        "Extension activation failed: command 'devplatform.connect' not found",
+        "Activating extension 'company.devplatform-tools' failed"
+      ],
+      "answer": "The *Devplatform Tools* extension failing to activate in VS Code is almost always a half-installed update.\n1. In the Extensions panel, uninstall *Devplatform Tools*, then close VS Code completely (check the tray).\n2. Reinstall it from the internal marketplace, not from the public one; the public listing is not the same build.\n3. Open the command palette and run *Devplatform: Connect*.\n\nIf the marketplace itself will not load, the IDE is bypassing the proxy agent: see the proxy-authentication answer.",
+      "owner": "platform-team",
+      "source": "WhatsApp group 'Dev Platform Support', 2026-09-06",
+      "verified_against": "Thread 2026-09-06 11:20-11:45: asker posted the activation error after an update; platform on-call sent the uninstall-quit-reinstall steps; asker confirmed the connect command appeared.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "api_token_expires_overnight",
+      "category": "auth",
+      "status": "published",
+      "triggers": [
+        "every morning devctl asks me to log in again",
+        "token expired 401 from the gateway",
+        "why does my token expire overnight",
+        "כל בוקר צריך להתחבר מחדש",
+        "401 Unauthorized token expired",
+        "devctl login again every day"
+      ],
+      "error_strings": [
+        "401 Unauthorized: token expired",
+        "The access token has expired. Run 'devctl login' to refresh it"
+      ],
+      "answer": "A `devctl` token that expires overnight is expected: gateway tokens live 8 hours from `devctl login`, so the first command of the day asks you to log in.\n1. `devctl login` opens the browser for SSO and stores a new token.\n2. Retry the command.\n\nThis is the command-line token, not the browser session. The browser prompt that comes back every 4 hours is a separate policy.\nA token that dies mid-day, well before 8 hours, is usually the laptop clock drifting; check the time is set automatically.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Authentication', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-14 08:05-08:12: asker asked whether it is normal to log in 'every single morning'; platform on-call confirmed the 8-hour token; asker replied 'ok good to know'.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "where_are_the_logs",
+      "category": "cli",
+      "status": "published",
+      "triggers": [
+        "where does devctl write its logs",
+        "where are the logs",
+        "איפה הלוגים של devctl",
+        "how do I get a log file for a ticket",
+        "devctl log location windows",
+        "log file path mac"
+      ],
+      "error_strings": [],
+      "answer": "Where `devctl` keeps its logs:\n- Windows: `%LOCALAPPDATA%\\devctl\\logs\\`\n- macOS and Linux: `~/.devctl/logs/`\n\n`devctl logs --today` prints today's file, and `devctl doctor --bundle` zips the logs plus the environment report for a ticket.\nAttach the bundle rather than a screenshot when you open a ticket; it saves a round trip.",
+      "owner": "platform-team",
+      "source": "Platform docs 'Troubleshooting', checked 2026-09-15",
+      "verified_against": "Thread 2026-09-07 15:00-15:03: asker asked where to find logs for a ticket; platform on-call sent the two paths and the bundle command; asker attached the bundle to their ticket.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "request_platform_access",
+      "category": "access",
+      "status": "published",
+      "triggers": [
+        "how do I get access to the platform",
+        "not a member of the required group",
+        "who do I ask for access",
+        "איך מבקשים הרשאה לפלטפורמה",
+        "my colleague needs to be added",
+        "access denied group membership"
+      ],
+      "error_strings": [
+        "You are not a member of the required group (DEVPLATFORM_USERS)",
+        "Access denied: your account is not enrolled in the developer platform"
+      ],
+      "answer": "Access to the platform is a group membership (*DEVPLATFORM_USERS*), requested through the access portal.\n1. Access portal > *Request access* > search *Developer Platform* > submit. Your manager approves it.\n2. Wait up to two hours after approval for the membership to sync, then sign out and in once.\n\nA colleague needs to request it themselves; the portal does not accept requests on behalf of others.\nIf the error persists two hours after approval, post here with the time of approval and the platform team will check the sync.",
+      "owner": "platform-team",
+      "source": "Access process, confirmed with the identity team 2026-09-15",
+      "verified_against": "Thread 2026-09-10 09:00-09:30: new joiner pasted the 'not a member' error; a peer sent the portal path; the asker confirmed access two hours later.",
+      "last_verified": "2026-09-15"
+    },
+    {
+      "id": "how_to_ask_the_bot",
+      "category": "meta",
+      "status": "published",
+      "triggers": [
+        "how do I use the bot",
+        "what does the bot know",
+        "what can you answer",
+        "how do I ask the bot a question",
+        "איך משתמשים בבוט",
+        "מה הבוט יודע לענות"
+      ],
+      "error_strings": [],
+      "answer": "I am the group's support bot. I answer from a knowledge base of {KB_COUNT} entries written and checked by the platform team, and I never write an answer myself.\n\nHow to get the best out of me:\n1. Paste the exact error text, or send a screenshot of it. That is what I match on best.\n2. Say what you ran or clicked, and where (laptop on VPN, office, remote desktop).\n3. If I stay silent, I did not find a confident match. The people here will pick it up.\n\nMention me with @ or start your message with *bot* to make me answer even when I am not sure; I will say so if I have nothing.",
+      "owner": "platform-team",
+      "source": "This bot's own design notes",
+      "verified_against": "Reviewed against the bot's behaviour on 2026-09-15: the entry describes the explicit-call rule and the silence rule exactly as implemented.",
+      "last_verified": "2026-09-15"
+    }
+  ]
+}

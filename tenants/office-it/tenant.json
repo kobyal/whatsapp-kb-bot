@@ -1,0 +1,44 @@
+{
+  "id": "office-it",
+  "name": "Office IT Help",
+  "description": "Example second tenant: a Hebrew-speaking office IT help group (Outlook, Teams, printers, Wi-Fi). Shows one brain serving a second group with its own knowledge base, header, texts and clarifying questions.",
+  "groups": [
+    "120363000000000011@g.us",
+    "120363000000000012@g.us"
+  ],
+  "group_names": {
+    "120363000000000011@g.us": "Office IT Help (the real group)",
+    "120363000000000012@g.us": "Office IT Bot Test (one human + the bot)"
+  },
+  "test_groups": [
+    "120363000000000012@g.us"
+  ],
+  "icon": "🤖",
+  "header": "תשובה אוטומטית של בוט התמיכה",
+  "contact_text": "להמשך טיפול: {owner}",
+  "audience": "an office IT help WhatsApp group\nfor non-technical staff",
+  "vision_audience": "an office IT help WhatsApp group for non-technical staff",
+  "vision_scope": "Office applications, Windows sign-in,\nprinters or the office network",
+  "screen_domain": "You are the front gate of a support assistant for an office IT help WhatsApp group. The\ngroup is about everyday workstation problems of non-technical staff: Outlook and Teams,\nprinters, the office Wi-Fi, Windows sign-in, documents that will not open. People write\nplain Hebrew, send screenshots of dialogs, and use no technical vocabulary. A message does\nnot have to quote an error to be on-domain; questions about how to do something are in\nscope too.",
+  "clarify_lead": "כדי לענות נכון חסר לי פרט אחד:",
+  "clarify_questions": {
+    "app": "באיזו תוכנה זה קורה — Outlook, Teams, Word או אחרת?",
+    "error": "מה הטקסט המדויק של ההודעה שמופיעה על המסך? אפשר גם צילום מסך.",
+    "action": "מה לחצתם או ניסיתם לעשות בדיוק כשזה קרה?"
+  },
+  "clarify_hints": {
+    "app": "which application (Outlook, Teams, Word) it happens in",
+    "error": "the exact message text on screen",
+    "action": "what they clicked or tried to do"
+  },
+  "clarify_default": "error",
+  "clarify_route2": false,
+  "clarify_route2_note": "Off on purpose. Route 2 asks a question when the classifier found nothing and the screen says the message is vague. With a 4-entry KB that question can almost never be answered afterwards, so it only costs credibility. Turn it on when the KB is dense enough for the question to pay off.",
+  "supporters": [
+    "100000000000011@lid"
+  ],
+  "no_match_text": "לא מצאתי לזה תשובה בבסיס הידע שלי.\nמה שיעזור: צילום מסך של ההודעה, או הטקסט המדויק שלה.\nאם זה קורה לכמה אנשים בבת אחת, כנראה שזו תקלה רוחבית וצוות המחשוב פה מטפל.",
+  "vision_failed_text": "לא הצלחתי לקרוא את התמונה כרגע (תקלה זמנית בקריאת תמונות).\nאפשר לנסות שוב בעוד דקה, או לכתוב כאן את הטקסט של ההודעה כמו שהוא.",
+  "help_entry_id": "",
+  "kb_owner": "office-it-team"
+}

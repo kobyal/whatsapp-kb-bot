@@ -22,12 +22,14 @@ resource "aws_instance" "listener" {
   }
 
   user_data = templatefile("${path.module}/user-data.sh.tftpl", {
-    repo_url       = var.repo_url
-    git_ref        = var.git_ref
-    brain_function = aws_lambda_function.brain.function_name
-    aws_region     = var.aws_region
-    allowed_groups = join(",", var.allowed_groups)
-    allow_dms      = var.allow_dms ? "1" : "0"
+    repo_url         = var.repo_url
+    git_ref          = var.git_ref
+    brain_function   = aws_lambda_function.brain.function_name
+    aws_region       = var.aws_region
+    allowed_groups   = join(",", var.allowed_groups)
+    dm_enabled       = var.dm_enabled ? "1" : "0"
+    dm_roster_groups = join(",", [for jid, tenant in var.dm_roster_groups : "${jid}=${tenant}"])
+    call_words       = join(",", var.call_words)
   })
   user_data_replace_on_change = true
 

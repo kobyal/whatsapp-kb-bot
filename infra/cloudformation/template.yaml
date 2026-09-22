@@ -1,23 +1,41 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
   WhatsApp KB bot: an always-on EC2 listener (Baileys) that forwards group messages to a
-  Lambda brain, which picks a knowledge-base entry with Amazon Bedrock or stays silent.
-  Deploy with infra/cloudformation/deploy.sh, which packages the Lambda first.
+  Lambda brain, which picks a knowledge-base entry with Amazon Bedrock, asks one fixed
+  clarifying question, or stays silent. Deploy with infra/cloudformation/deploy.sh, which
+  assembles tenants.json and packages the Lambda first. This flavour provisions KB tables for
+  up to two tenants (DefaultTenant and SecondTenant); the Terraform flavour handles any number.
 
 Parameters:
   NamePrefix:
     Type: String
     Default: wakb
-    Description: Prefix for every resource name.
+    Description: Prefix for every resource name. KB tables are <prefix>-kb-<tenant id>.
+  DefaultTenant:
+    Type: String
+    Default: dev-platform
+    Description: Folder under tenants/ that answers groups not claimed by any tenant.json.
+  SecondTenant:
+    Type: String
+    Default: ""
+    Description: Optional second tenant id (folder under tenants/). Empty for a single-tenant deploy.
   AllowedGroups:
     Type: String
     Default: ""
     Description: Comma-separated WhatsApp group jids or exact group subjects the bot may answer in. Empty answers nobody.
-  AllowDms:
+  DmEnabled:
     Type: String
     Default: "0"
     AllowedValues: ["0", "1"]
-    Description: Also answer 1:1 chats.
+    Description: 1:1 mode. Members of the groups in DmRosterGroups may message the bot directly.
+  DmRosterGroups:
+    Type: String
+    Default: ""
+    Description: "Comma-separated <group jid>=<tenant id> pairs, e.g. 120363000000000001@g.us=dev-platform."
+  CallWords:
+    Type: String
+    Default: "bot,בוט"
+    Description: A message starting with one of these words is an explicit call to the bot.
   RepoUrl:
     Type: String
     Default: https://github.com/kobyal/whatsapp-kb-bot.git
@@ -43,19 +61,29 @@ Parameters:
   MinConfidence:
     Type: String
     Default: "0.85"
+  ClarifyMinCandidate:
+    Type: String
+    Default: "0.70"
+  ClarifyEnabled:
+    Type: String
+    Default: "1"
+    AllowedValues: ["0", "1"]
+  SupporterWindowSeconds:
+    Type: String
+    Default: "180"
   AnswerMode:
     Type: String
     Default: verbatim
     AllowedValues: [verbatim, compose]
-  BotHeader:
-    Type: String
-    Default: "🤖 _Automated answer from the support bot_"
   VpcCidr:
     Type: String
     Default: 10.42.0.0/24
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Conditions:
+  HasSecondTenant: !Not [!Equals [!Ref SecondTenant, ""]]
 
 Resources:
   # ---------------------------------------------------------------- network
@@ -99,15 +127,32 @@ Resources:
       SecurityGroupEgress:
         - { IpProtocol: "-1", CidrIp: 0.0.0.0/0 }
 
-  # ---------------------------------------------------------------- knowledge base
+  # ---------------------------------------------------------------- knowledge base(s) + state
   KbTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub "${NamePrefix}-kb-entries"
+      TableName: !Sub "${NamePrefix}-kb-${DefaultTenant}"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
       KeySchema: [{ AttributeName: id, KeyType: HASH }]
       PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+  KbTableSecond:
+    Type: AWS::DynamoDB::Table
+    Condition: HasSecondTenant
+    Properties:
+      TableName: !Sub "${NamePrefix}-kb-${SecondTenant}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
+      KeySchema: [{ AttributeName: id, KeyType: HASH }]
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+  ConvoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${NamePrefix}-convo-state"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{ AttributeName: convo, AttributeType: S }]
+      KeySchema: [{ AttributeName: convo, KeyType: HASH }]
+      TimeToLiveSpecification: { AttributeName: expires_at, Enabled: true }
 
   # ---------------------------------------------------------------- brain
   BrainRole:
@@ -123,7 +168,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: bedrock-and-kb
+        - PolicyName: bedrock-kb-convo
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -134,7 +179,10 @@ Resources:
                   - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
               - Effect: Allow
                 Action: dynamodb:Scan
-                Resource: !GetAtt KbTable.Arn
+                Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${NamePrefix}-kb-*
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !GetAtt ConvoTable.Arn
   BrainLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -142,10 +190,10 @@ Resources:
       RetentionInDays: 30
   BrainFunction:
     Type: AWS::Lambda::Function
-    DependsOn: BrainLogGroup
+    DependsOn: [BrainLogGroup, KbTable]
     Properties:
       FunctionName: !Sub "${NamePrefix}-brain"
-      Description: "WhatsApp KB bot brain: routes a message to a KB entry with Bedrock, or stays silent"
+      Description: "WhatsApp KB bot brain: routes a message to a KB entry with Bedrock, asks one fixed question, or stays silent"
       Runtime: python3.12
       Handler: lambda_function.lambda_handler
       Role: !GetAtt BrainRole.Arn
@@ -154,12 +202,16 @@ Resources:
       Code: { S3Bucket: !Ref CodeBucket, S3Key: !Ref CodeKey }
       Environment:
         Variables:
-          KB_TABLE: !Ref KbTable
+          KB_TABLE_PREFIX: !Sub "${NamePrefix}-kb-"
+          CONVO_TABLE: !Ref ConvoTable
+          DEFAULT_TENANT: !Ref DefaultTenant
           CLASSIFY_MODEL: !Ref ClassifyModel
           VISION_MODEL: !Ref VisionModel
           MIN_CONFIDENCE: !Ref MinConfidence
+          CLARIFY_MIN_CANDIDATE: !Ref ClarifyMinCandidate
+          CLARIFY_ENABLED: !Ref ClarifyEnabled
+          SUPPORTER_WINDOW: !Ref SupporterWindowSeconds
           ANSWER_MODE: !Ref AnswerMode
-          BOT_HEADER: !Ref BotHeader
 
   # ---------------------------------------------------------------- listener
   ListenerRole:
@@ -210,16 +262,18 @@ Resources:
           BRAIN_FUNCTION=${BrainFunction}
           AWS_REGION=${AWS::Region}
           ALLOWED_GROUPS="${AllowedGroups}"
-          ALLOW_DMS=${AllowDms}
+          DM_ENABLED=${DmEnabled}
+          DM_ROSTER_GROUPS="${DmRosterGroups}"
+          CALL_WORDS="${CallWords}"
           ENV
           chmod 640 /etc/wakb.env
+          # AL2023 first boot holds the rpm lock for a while: retry instead of dying.
           for i in $(seq 1 10); do dnf install -y -q git && break; echo "dnf busy, retry $i"; sleep 10; done
           export REPO_URL="${RepoUrl}" GIT_REF="${GitRef}"
           git clone -q --depth 1 --branch "$GIT_REF" "$REPO_URL" /tmp/wakb-src
           bash /tmp/wakb-src/listener/install.sh
           rm -rf /tmp/wakb-src
-  # IMDSv2 is enforced through a launch-template-free route: AL2023 defaults to IMDSv2
-  # required, so no extra property is needed here.
+  # AL2023 defaults to IMDSv2 required, so no extra property is needed here.
 
 Outputs:
   InstanceId:
@@ -228,5 +282,10 @@ Outputs:
     Value: !Ref BrainFunction
   KbTable:
     Value: !Ref KbTable
+  KbTableSecond:
+    Condition: HasSecondTenant
+    Value: !Ref KbTableSecond
+  ConvoTable:
+    Value: !Ref ConvoTable
   NextSteps:
-    Value: !Sub "publish: python3 kb/publish.py --table ${KbTable} | ask: scripts/ask.sh ${BrainFunction} 'question' | link: scripts/qr.sh ${ListenerInstance}"
+    Value: !Sub "publish: KB_TENANT=${DefaultTenant} python3 kb/publish.py --table-prefix ${NamePrefix}-kb- | ask: scripts/ask.sh ${BrainFunction} 'question' | link: scripts/qr.sh ${ListenerInstance}"

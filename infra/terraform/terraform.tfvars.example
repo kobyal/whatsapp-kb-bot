@@ -1,8 +1,14 @@
 aws_region     = "eu-west-1"
 name_prefix    = "wakb"
-allowed_groups = ["My Team Support"]   # group subject(s) or jid(s)
-allow_dms      = false
+default_tenant = "dev-platform"                 # a folder under tenants/
+allowed_groups = ["Dev Platform Support"]       # group subject(s) or jid(s); every tenant's groups go here
 repo_url       = "https://github.com/<you>/whatsapp-kb-bot.git"
+
+# 1:1 mode is off by default. To let members of a group message the bot directly, map the
+# group's jid (not its name) to the tenant whose KB they should get:
+# dm_enabled       = true
+# dm_roster_groups = { "120363000000000001@g.us" = "dev-platform" }
+
 # If your account has an instance scheduler that stops untagged/tagged instances:
-# disable_api_stop = true
+# disable_api_stop = true          # remember: also blocks `terraform destroy` until set back to false
 # ignore_tag_keys  = ["schedule"]

@@ -1,0 +1,45 @@
+{
+  "id": "dev-platform",
+  "name": "Developer Platform",
+  "description": "Example tenant: the support group of an internal developer platform (VPN, SSO, proxy, the `devctl` CLI, Docker, git, the IDE extension). Replace every value here with your own.",
+  "groups": [
+    "120363000000000001@g.us",
+    "120363000000000002@g.us"
+  ],
+  "group_names": {
+    "120363000000000001@g.us": "Dev Platform Support (the real group)",
+    "120363000000000002@g.us": "Dev Platform Bot Test (one human + the bot)"
+  },
+  "test_groups": [
+    "120363000000000002@g.us"
+  ],
+  "icon": "🤖",
+  "header": "Automated answer from the platform support bot",
+  "contact_text": "Still stuck? Contact: {owner}",
+  "audience": "an internal developer-platform\nsupport WhatsApp group",
+  "vision_audience": "an internal developer-platform support WhatsApp group",
+  "vision_scope": "developer tooling, the\ncorporate network or the workstation",
+  "screen_domain": "You are the front gate of a support assistant for an internal developer-platform WhatsApp\ngroup. The group is about the company's developer tooling: the VPN and corporate proxy,\nsingle sign-on (SSO) and MFA, the `devctl` command-line tool, Docker and the internal\ncontainer registry, git and personal access tokens, the IDE extension, API tokens for the\ninternal gateway, and access requests. Questions about HOW to do something with those tools,\nwhere logs are, which version is current, and how to ask this bot are IN SCOPE too. A\nmessage does not have to describe a crash or quote an error to be on-domain.",
+  "clarify_lead": "To answer properly I am missing one detail:",
+  "clarify_questions": {
+    "env": "Where does this happen: on your laptop over VPN, in the office network, or on the remote desktop?",
+    "error": "What is the exact error text on screen? A screenshot works too.",
+    "action": "What exactly did you run or click when it happened?"
+  },
+  "clarify_hints": {
+    "env": "whether they are on VPN, in the office, or on the remote desktop",
+    "error": "the exact error text on screen",
+    "action": "what they ran or clicked"
+  },
+  "clarify_default": "error",
+  "clarify_route2": true,
+  "supporters": [
+    "100000000000001@lid",
+    "100000000000002@lid"
+  ],
+  "supporters_note": "The people who ANSWER in this group (the platform team's on-call). Their messages never trigger a clarifying question; an explicit @-mention of the bot still does. Read the ids off the listener log against their own messages; match on the id, never on a display name.",
+  "no_match_text": "I could not find an answer to that in my knowledge base.\nWhat helps: the exact error text, or a screenshot of it.\nIf several people hit this at once it is probably an outage, and the platform team here is on it.",
+  "vision_failed_text": "I could not read the image just now (a temporary problem reading images).\nTry again in a minute, or paste the error text here as it appears.",
+  "help_entry_id": "how_to_ask_the_bot",
+  "kb_owner": "platform-team"
+}

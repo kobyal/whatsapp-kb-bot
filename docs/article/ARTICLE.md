@@ -1,362 +1,211 @@
-# I built a WhatsApp bot that answers my team's repeat questions from a knowledge base. Here is the architecture, the cost, and the repo.
+# I gave a WhatsApp support bot to 200 colleagues. Here is what it took to make it shut up, listen, and learn.
 
-*EC2 + Lambda + Amazon Bedrock, about $18 a month, Terraform or CloudFormation, deployed and tested live while writing. Plus the design rules that kept it from embarrassing me in front of 120 developers.*
+*A knowledge-base bot in two pilot groups at a bank, on EC2 + Lambda + Bedrock for about $18 a month. The model never writes an answer. The interesting part was everything it had to learn not to say.*
 
-![Architecture](images/architecture.png)
+![Overall architecture: two groups and 1:1 chats feed a listener on EC2; a Lambda brain screens and classifies against per-tenant knowledge bases; a separate curator reads the log](images/01-architecture.png)
+*Figure 1. One WhatsApp account, one listener, one brain, one knowledge base per group, and a curator that can only read the log.*
 
-**TL;DR** A small EC2 holds the WhatsApp session (Baileys). A Lambda asks Claude Haiku on Bedrock *which* human-written answer fits, and sends it verbatim if confidence clears a floor, otherwise says nothing. Knowledge base is a JSON file synced to DynamoDB. About $18/month. Terraform or CloudFormation, one `apply`. Tested live: nine messages, nine correct outcomes, screenshots included. Repo: [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot). Use a dedicated number, never your own.
+**TL;DR** A small EC2 instance holds the WhatsApp session. A Lambda asks a model *which* human-written answer fits and sends it word for word if confidence clears 0.90, asks one of three fixed questions between 0.70 and 0.90, and says nothing otherwise. It serves two pilot groups with separate knowledge bases, answers members in private chat, and a separate layer harvests confirmed answers from the log into the KB behind gates that run in code. Three months in, the lessons that mattered were about identity and structure, not prompts. Repo: [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot).
 
-*Personal project, my own time and my own AWS account. Not a product of my employer and not endorsed by WhatsApp. It uses an unofficial WhatsApp client; section 1 explains what that means before you decide.*
+*Personal project, my own time and my own AWS account. Not a product of my employer, not endorsed by WhatsApp, and it uses an unofficial WhatsApp client; section 1 explains what that means before you decide whether to run one.*
+
+![34-second demo: group answer, group silence, direct chat](demo/demo.gif)
+*A 34-second demo with fictional people and a generic chat UI. The mp4 is in `docs/article/demo/`.*
 
 ---
 
-Every support group has the same twenty questions. "The VPN keeps disconnecting." "How do I install this on Windows?" "I get AADSTS70043 again." Someone who knows the answer types it out for the fifteenth time, or pastes a link nobody reads, or is asleep.
+Every support group has the same twenty questions. "It logs me out every morning." "How do I install this on Windows?" Someone who knows the answer types it for the fifteenth time, or pastes a link nobody reads, or is asleep.
 
-I run one of those groups: about 120 developers at a bank onboarding onto a new AI coding tool, all in one WhatsApp group. In the summer of 2026 I built a bot that sits in the group and answers the questions that repeat. It has been running since, and it changed how I think about "RAG bots" for support.
+I run one of those groups: about 120 developers at a bank onboarding onto a new AI coding tool, all in one WhatsApp group. In the summer of 2026 I built a bot that sits in the group and answers the questions that repeat. In September a second division asked for one, for a different pilot with a different knowledge base. Then people started messaging the bot privately. Then, one morning after a holiday, I opened the second group and found the bot asking a clarifying question of the person who was doing the support.
 
-This article is the template version of that bot. Everything here is in a public repo, [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot), with both Terraform and CloudFormation, and I deployed it fresh into a clean AWS account while writing this to make sure the instructions are honest.
-
-I will cover:
+This is the story of that bot growing from "answers a question" to "knows when to be quiet", and of the template version that is public. I will cover:
 
 1. The two constraints that decide the architecture before you write a line
-2. What is in the box, and why it is this small
-3. Deploying it, step by step, with screenshots
-4. The design rules that matter more than the code
-5. Costs, risks, and what else is out there
+2. What the bot does, and why silence is one of its three outcomes
+3. The morning it talked over the humans, and three fixes that were not prompt wording
+4. Why the *order* of a list in a JSON file decided whether a question got answered
+5. Two groups, one bot, and what happened when people wanted to DM it
+6. The curator: letting the bot learn from the log without letting it write
+7. A 60-second stall that looked exactly like silence
+8. Costs, risks, what is next, and what I would do differently
 
 ## 1. Two constraints you cannot design around
 
 ### WhatsApp has no official way into a group
 
-The first thing everyone reaches for is the WhatsApp Business Cloud API. It is the compliant route, and if your bot is a 1:1 customer-service line, use it.
+The WhatsApp Business Cloud API is the compliant route, and if your bot is a 1:1 customer-service line, use it. But if the bot needs to live *inside a group that already exists*, read the Groups API documentation: as of writing, a group created through the API is capped at **8 participants**, the business must create the group itself, and it cannot join a group a person created. Registering a number with the Cloud API also deletes that number's normal WhatsApp account. Meta's new setup-automation tooling, announced this month, changes none of those limits.
 
-But if your bot needs to live *inside a group that already exists*, read Meta's Groups API documentation carefully. As of writing, a group created through the API has a maximum of **8 participants**, the business has to create the group itself, and it cannot join a group a person created. Also, registering a phone number with the Cloud API deletes that number's normal WhatsApp account.
+So for a community group of a hundred people, the only technical route is an **unofficial multi-device client**: a library that speaks the WhatsApp Web protocol and appears as a linked device, like WhatsApp Desktop does. I use [Baileys](https://github.com/WhiskeySockets/Baileys). It works well. It is also against WhatsApp's terms of service, and numbers running it do get banned.
 
-So for a community group of a hundred people, the only technical route is an **unofficial multi-device client**: a library that speaks the WhatsApp Web protocol and shows up as a "linked device" on a phone, exactly like WhatsApp Desktop does. I use [Baileys](https://github.com/WhiskeySockets/Baileys). It works very well. It is also against WhatsApp's terms of service, and numbers running it do get banned.
+I will not pretend otherwise, so here is how I live with it. A **dedicated prepaid SIM** in an old Android on Wi-Fi, never my own number. **Reply-only**: the bot never starts a conversation and never messages a stranger. **Human pacing**: a random 1.5 to 4 second delay before every reply. Nothing I care about attached to that number. If it is banned, I lose a cheap SIM; if it were my number, I would lose my chats, my groups and my family with no appeal process that works. People make that mistake exactly once, so the repo has a whole document on picking the SIM.
 
-I am not going to pretend otherwise, so here is how I live with it:
-
-- **Dedicated prepaid SIM.** Never your own number. If it gets banned, you lose a €5 SIM.
-- **Reply-only, low volume.** The bot never starts a conversation and never messages strangers. It replies, in a group of people who know it is there, a few times a day.
-- **Human pacing.** A random 1.5 to 4 second delay before every reply. Fixed machine cadence is one of the signals anti-automation systems key on.
-
-If that risk profile is not acceptable for you, jump to section 5: the *brain* half of this template works unchanged behind the official API, and I list the compliant options there.
-
-### Get the bot its own number. Not yours. Really.
-
-This deserves its own heading because it is the mistake people make once.
-
-The bot runs as a linked device of *some* WhatsApp account. If that account is yours, then a ban is a ban on **you**: your chats, your groups, your family, gone, with no appeal process that works. It also means every message the bot handles is visible to a session logged in as you, and every group you are in is a group the bot can technically see.
-
-So:
-
-- **A dedicated number**, on a **dedicated cheap phone** (any old Android works; it only needs to be online once every two weeks to keep the linked device alive).
-- **A prepaid SIM with no monthly commitment.** The number must not expire, because if the SIM dies, the number gets recycled and someone else's WhatsApp eventually inherits your bot's identity. See the SIM notes below for what that looks like in Israel.
-- **Not a virtual or VoIP number.** WhatsApp rejects most of them at registration and bans the rest later.
-- **Do not attach anything you care about to that number**: no bank, no 2FA, no Google recovery.
-
-**What "a dedicated number" costs in practice (Israel, September 2026 prices).** Every carrier's prepaid terms let them recycle a line that goes unused, so the metric is *shekels per month of guaranteed validity*, not the sticker price:
-
-| Option | One-time cost | Number stays valid | Notes |
-|---|---|---|---|
-| **Rami Levy prepaid SIM + long data bundle** | ₪7 SIM + ~₪140 bundle | **24 to 36 months** | Cheapest per month (~₪4–6). Pelephone network. Real mobile number, SMS works for the verification |
-| **Partner Bigtalk kit** | ₪80–90 incl. a 12-month card | 12 to 18 months per card | National carrier, eSIM available |
-| **HOT mobile HOTALK BASIC 50** | ₪50 card + SIM | **180 days** per card | This is the "50 shekels and that's it" people mention. True for six months, then you top up or lose the number |
-| **019 Mobile prepaid** | ₪10 SIM, ₪49 for 30 days | 30 days per package; resellers report recycling after ~6 months idle | Fine, but not the cheapest way to keep a number alive |
-| Virtual / VoIP +972 numbers, tourist eSIMs | $5–30 | days to weeks | **Do not.** WhatsApp rejects VoIP numbers at registration, and tourist eSIMs expire under you |
-
-My pick: the Rami Levy blank SIM with a multi-year data bundle, in a spare Android that lives on Wi-Fi, plus a calendar reminder a month before the bundle ends. WhatsApp itself needs that phone online only once every 14 days to keep the linked device alive, and deletes an account after 120 days offline. Prices move monthly; check before buying. Full comparison with sources: [docs/research/israel-prepaid-sim.md](../research/israel-prepaid-sim.md).
-
-### A linked device is a socket, so Lambda cannot be the bot
-
-The second constraint is architectural. A linked device holds a persistent, authenticated WebSocket. Lambda is stateless and dies after 15 minutes. Every serverless-only design for this I sketched died on that fact.
-
-So the bot is two pieces:
-
-- **The listener**: a tiny always-on EC2 instance holding the WhatsApp session. It knows nothing about the knowledge base. It forwards messages and sends replies.
-- **The brain**: a Lambda function. It knows nothing about WhatsApp. JSON in, JSON out.
-
-That split is not just forced; it is good. The brain is stateless, versioned, and redeployable in seconds. And the day someone says "can we have this in Teams too", you replace the listener and touch nothing else.
-
-## 2. What is in the box
-
-The whole repo is a few hundred lines of real code. Here is the tour.
-
-```
-whatsapp-kb-bot/
-├── kb/            kb.json (the knowledge base), kbcheck.py, publish.py
-├── brain/         lambda_function.py            ~200 lines of Python
-├── listener/      listener.js, qrserve.js, install.sh, systemd units
-├── infra/
-│   ├── terraform/       VPC, EC2, Lambda, DynamoDB, IAM
-│   └── cloudformation/  the same stack as one template + deploy.sh
-├── scripts/       ask.sh, qr.sh, logs.sh, shell.sh   (all over SSM, no SSH)
-└── docs/          this article, diagrams, design notes, a survey of alternatives
-```
-
-### The knowledge base is a JSON file
-
-```json
-{
-  "id": "sso_session_expires_every_4h",
-  "category": "auth",
-  "status": "published",
-  "triggers": ["logged out every few hours", "token expired", "sso keeps asking me to log in"],
-  "error_strings": ["AADSTS70043", "The refresh token has expired due to inactivity"],
-  "answer": "This is expected: the company's Conditional Access policy limits ...",
-  "owner": "Platform team",
-  "last_verified": "2026-09-01"
-}
-```
-
-Three fields do the work. `triggers` are how people actually phrase the problem. `error_strings` are what they literally see on screen, which turns out to be the strongest signal there is: people describe problems inconsistently but quote errors verbatim. `answer` is what the bot sends. Exactly. Word for word.
-
-`publish.py` syncs the file to a DynamoDB table. The brain reads the table with a 60-second cache, so an edit is live in the group within a minute with no redeploy. The file is also baked into the Lambda zip as a fallback snapshot, so the bot keeps answering if the table is unreachable.
-
-### The brain: classify, then decide
-
-Here is the entire decision, stripped of error handling:
-
-```python
-def lambda_handler(event, context):
-    text = event["text"]
-    if event.get("image_b64"):                       # a screenshot? read it into text first
-        text += "\n" + read_image(event["image_b64"], event["mime"])
-
-    entries, _ = load_entries()                      # DynamoDB, 60 s cache, kb.json fallback
-    entry, confidence, why = classify(text, entries) # one Bedrock call, returns an id + 0..1
-
-    if entry is None or confidence < MIN_CONFIDENCE:
-        return {"outcome": "silent", ...}
-    return {"outcome": "answer", "id": entry["id"], "reply": compose(entry, text)}
-```
-
-The classifier is Claude Haiku 4.5 through the Bedrock Converse API. It does not see the answers. It sees a **catalogue**: every entry's id, phrasings, error strings and a 140-character gloss. It returns `{"id": "...", "confidence": 0.93, "why": "..."}`, and that is all the model contributes.
-
-Two things about that prompt earned their place through pain:
-
-**It asks "is this a request for help at all?" first.** When I replayed 326 real group messages through an early version, half of the false positives were never questions. Someone posting a fix for others. A staff announcement that something now works. "Same here." The bot was talking over the humans doing triage. One paragraph in the prompt fixed most of it.
-
-**The catalogue goes at the end of the system prompt, with nothing per-request before it.** That makes the whole prefix cacheable. Bedrock prompt caching kicks in once the prefix crosses the model's minimum (a few thousand tokens, so roughly 25+ entries), and at that point it cut my per-message cost by two thirds.
+A linked device holds a persistent WebSocket and Lambda dies after 15 minutes, so the bot is two pieces: a tiny always-on **listener** on EC2 that knows nothing about the knowledge base, and a **brain** in Lambda that knows nothing about WhatsApp. JSON in, JSON out. Everything below happens in the brain, which is why almost none of it is WhatsApp-specific.
 
 ### The model routes. It does not write.
 
-This is the rule I would defend hardest.
+This is the rule I would defend hardest, and every feature in this article was built inside it. The bot sends a knowledge-base entry's `answer` exactly as a human wrote and verified it. The model's only job is to pick *which* entry.
 
-By default (`ANSWER_MODE=verbatim`), the bot sends the entry's `answer` text exactly as a human wrote and verified it. The model's only job is to pick *which* entry. There is no step where a language model composes prose that 120 people will read as authoritative.
+In a group, a confident wrong answer is the most expensive thing a bot can do. Everyone reads it. It looks official. Someone follows it. Bounding the model to "pick an entry" bounds the failure to "wrong entry", and a confidence floor handles that. "Plausible invented steps" stops being a failure mode. Even the three clarifying questions are hard-coded strings; the model returns a *key*, and an unknown key falls back to the one asking for the exact error text.
 
-Why so strict? Because in a group, a confident wrong answer is the most expensive thing the bot can do. Everyone reads it. It looks official. Someone follows it. Bounding the model to "pick an entry" bounds the failure to "wrong entry", and the confidence floor handles that. "Plausible invented steps" is simply not a failure mode anymore.
+## 2. What the bot does, and why silence is an outcome
 
-There is a `compose` mode for teams that want natural phrasing. It lets the model rephrase the one matched entry for the question, with the entry as its only allowed source. I ship it because people ask. I run `verbatim`.
+![The pipeline: supporter check, screen, classify, then answer, clarify or silence](images/02-three-outcomes.png)
+*Figure 2. Three outcomes, and most paths lead to the grey one.*
 
-### The listener: hold the session, forward, reply
+**Screen first.** Before any matching, a short prompt with no catalogue in it answers one question: *is this a request for help at all, and is it in our domain?* When I replayed 326 real group messages through an early version, 21 of the 64 confident answers landed on messages that were never questions: someone posting a fix for others, a staff announcement, "same here", one human asking another. The bot was talking over the humans doing triage.
 
-`listener.js` is 150 lines of Node. It:
+**Then classify.** The model sees a catalogue of every entry's id, phrasings, error strings and a short gloss, never the answers, and returns `{"id": ..., "confidence": 0.93}`.
 
-1. Opens a Baileys socket with credentials stored on disk. If there are none, it emits a QR code.
-2. On every message: drop it unless the group is on the **allowlist** (by name or jid). Drop it if the bot sent it. Drop it if it predates startup.
-3. Download the image if there is one, call the Lambda with `{text, image_b64, sender}`.
-4. If the brain returned a `reply`, wait 1.5 to 4 seconds, then send it **as a quoted reply** to the original message, because that is how the humans in the group attach answers to questions.
+**Then one of three outcomes.**
 
-The allowlist fails closed. An empty list answers nobody. This matters more than it sounds: my bot's phone is in the real 120-person group *and* in a test group, and for weeks it only answered in the test group while I measured it.
+| Confidence | Outcome | Why the edge is where it is |
+|---|---|---|
+| ≥ 0.90 | **Answer**, verbatim | The model only emits 0.92 and 0.95 above this line; measured after the change, 0% of them were wrong |
+| 0.70 – 0.90 | **Clarify**: one of three fixed questions, once per person per 30 minutes | The 0.85 bucket was right 3 times in 39. A bucket that names an entry and is wrong 92% of the time is exactly where one concrete question is the honest response |
+| below 0.70, not a request, off-domain, or "is the service down?" | **Silence** | A knowledge base cannot answer "is it down for everyone?", and asking "which environment?" sets an expectation it cannot meet |
 
-### The QR page nobody tells you about
+My first floor was 0.80. When an independent model graded every confident answer in the replay, the wrong-or-partial rate was **42%**. Raising the floor to 0.90 and routing the 0.85 bucket to a question took it to **6%**. The bot answered fewer, better questions, and in a 120-person group that is the trade you want every time.
 
-Linking a device means scanning a QR code. The code **rotates every 20 to 60 seconds** depending on the library version. The first time I tried "save the QR to a PNG and send it to the person with the phone", seven codes had expired by the time they opened the image.
+Silence is not the bot failing. It is the bot deciding a human will do this better, which in a group full of humans is usually true. It is also *readable*: people learn that the bot speaks only when it is sure, which is the only reputation worth having.
 
-So `qrserve.js` is a page that re-renders the current code every 4 seconds. It binds to `127.0.0.1` on the instance and you reach it through an SSM port-forward. Never expose a linking QR publicly: anyone who scans it links the bot account to *their* phone.
+The clarify rate limit is a safety property, not a nicety. WhatsApp delivers bursts, and the first real end-to-end run sent three identical clarifying questions within one second from concurrent invocations. Comparing "now" to a stored timestamp is not a rate limit under concurrency; the limit now lives in a DynamoDB conditional write, so exactly one caller can win it.
 
-## 3. Deploying it
+## 3. The morning the bot talked over the humans
 
-I did this into a fresh sandbox account in `eu-west-1` while writing. Total time from `terraform apply` to a working brain: about four minutes. Linking the phone: one minute more.
+The second pilot group has something the first does not: a staffed support bench, two people whose job is to answer. On the first morning back from a holiday, my bot interrupted both of them.
 
-### Prerequisites
+At 08:33 the division's product owner asked a user, "Is there a bar at the top of Outlook asking you to sign in?" The bot replied to *her* with a clarifying question. Ten minutes later her colleague, quoting a user, asked "drag it to the mail icon in the taskbar, or into the open window?" The bot asked *him* for the exact error text.
 
-- An AWS account with **Bedrock model access** enabled for Claude Haiku 4.5 (and Claude Sonnet 4.6 if you want screenshots read) in your region. This is a checkbox in the Bedrock console under *Model access*; forget it and every classification fails silently to "no answer".
-- Terraform ≥ 1.5 **or** just the AWS CLI for the CloudFormation route.
-- The AWS CLI with the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html), for the QR page and logs.
-- A dedicated phone number on a phone with WhatsApp installed.
+![A member asks in the group; the bot answers as a quoted reply marked automatic](images/demo-group_answer.png)
+*From the demo: a covered question in the group. (The real thread from that morning is a bank group, so it stays out of this article.)*
 
-### Step 1: fork and configure
+Both are textbook "second person aimed at a human", and the screening prompt already had a rule for exactly that. It had been right for two weeks and still did not fire. The reason was not in the prompt.
 
-The EC2 instance clones the repo at boot to get the listener code, so fork first and point the infra at your fork.
+![Before: the brain received only a text string. After: sender, quoted participant, recent room activity and whether the bot was addressed](images/03-what-the-brain-sees.png)
+*Figure 3. The prompt was fine. The input was a bare string.*
 
-```bash
-git clone https://github.com/<you>/whatsapp-kb-bot.git && cd whatsapp-kb-bot
-cd infra/terraform && cp terraform.tfvars.example terraform.tfvars
-```
+**The brain only ever saw the text.** The listener forwarded `{text, group, participant}`. Nothing about who the sender was in that room, whom they were replying to, or whether a human had just picked the question up. No prompt can recover information that was never in the input. So the three fixes are all **identity or structure, never model judgement**:
 
-```hcl
-aws_region     = "eu-west-1"
-name_prefix    = "wakb"
-allowed_groups = ["KB Bot Test"]        # the group's name as you see it in WhatsApp
-repo_url       = "https://github.com/<you>/whatsapp-kb-bot.git"
-```
+- **`supporters`, per tenant.** The people who *answer* in this group. Their messages return silent before the screen or the vision pass runs; the deployed function reports `calls=0` on that path. An explicit call to the bot is exempt, because a supporter may address it on purpose.
+- **`quoted_participant`.** The listener now passes the author of the quoted message. A reply inside a two-person exchange **suppresses the question but not an answer**: a ≥0.90 hit is worth having whoever it was aimed at; only the guess is unwelcome.
+- **A supporter-activity window.** One row per *group*, because "is a human already on this?" is a property of the room. 180 seconds, the observed gap between a question and one of the group's own answerers picking it up.
 
-### Step 2: apply
+And one number that changed a default. Route 2, the clarifying question when the classifier finds *nothing* and the screen says the message is too vague, is a bet that the KB can answer once the message is sharpened. Measured in the second group over its first week, against an 8-entry knowledge base: **11 clarifying questions, 0 answers.** Every follow-up ended in silence because no answer existed to be found. The people who replied got nothing for replying. Route 2 is now a per-tenant flag: off for the small KB, on for the 41-entry one where the same trade was measured to pay. With a small KB the bet always loses, and the bot spends its credibility asking questions it cannot use.
 
-```bash
-terraform init && terraform apply
-```
+## 4. Trigger order is load-bearing
 
-What gets created: a tiny dedicated VPC with one public subnet and **no inbound rules at all**, a `t3.small` with an IAM role that can do exactly two things (SSM, and invoke one Lambda), the Lambda with a role that can call Bedrock and scan one DynamoDB table, and the table.
+This one cost me a correct answer three separate times before I drew the picture.
 
-![Terraform apply output](images/terraform-apply.png)
+![A list of nine trigger phrases; the first six are marked read, the last three never seen, and the phrase the user actually used sits at position 8](images/06-trigger-order.png)
+*Figure 4. The classifier is shown the first six phrasings of each entry. Position 8 does not exist as far as it knows.*
 
-The CloudFormation route is one script, because Lambda code over 4 KB has to come from S3:
+To keep the catalogue cacheable and the cost flat, each entry contributes its **first six** trigger phrasings to the prompt. A real question about extending a security token scored 0.85 against the right entry and got a clarifying question instead of the answer. The entry contained the exact phrase the user typed, at trigger **#8**. Moving it to #5, same set, positions only, took the score to 0.92, three runs out of three.
 
-```bash
-aws s3 mb s3://<your-deploy-bucket>
-infra/cloudformation/deploy.sh wakb <your-deploy-bucket> \
-  AllowedGroups="KB Bot Test" RepoUrl=https://github.com/<you>/whatsapp-kb-bot.git
-```
+The regression gate caught it, not review. The lesson generalises: when you truncate a list to bound a prompt, the truncation is a product decision, and the tool that edits the list has to know about it. My KB checker now warns at position 7 or later, and the curator in section 6 may only add phrasings at positions ≤ 6.
 
-![CloudFormation stack](images/cloudformation-stack.png)
+## 5. Two groups, one bot, and then 1:1
 
-**What the test deploy caught.** I said I deployed this fresh while writing, and it paid for itself twice. On Amazon Linux 2023 the `nodejs20` package wires `/usr/bin/node` through the alternatives system, and my installer helpfully overwrote that link with a symlink to itself. And on first boot the OS runs its own package transaction for a minute, so a plain `dnf install` can lose the rpm lock and die. Both are fixed in the repo: no hand-made symlink, and a retry loop around the installer. The instance now comes up clean from user-data on the first try, with one retry logged.
+When the second division asked for a bot, the obvious move was a second number: a second SIM, session, EC2 and linking ceremony, for nothing the users would see. Instead a **tenant** is a folder, `tenants/<id>/`, with a `tenant.json` (group ids, table, disclosure header, prompt audience text, the supporters list, the route-2 flag) and a `kb.json`. The brain resolves the tenant from the group id on every message. Shared: the account, the listener, the code, the floors. Per tenant: the KB, the texts, the policy flags. The first tenant's measured behaviour is pinned by tests, so adding a second cannot move it.
 
-![EC2 instance](images/ec2-console.png)
+Then people started messaging the bot privately. Three had already tried, one with a screenshot, and been dropped in silence because the listener only accepted group messages. So: the same engine, reached directly, with three deltas.
 
-### Step 3: publish the knowledge base
+![Funnel: five allowlisted groups, 215 people, 119 in one pilot, 91 in the other, 4 in both](images/04-roster-funnel.png)
+*Figure 5. The disambiguation design exists for four people.*
 
-```bash
-python3 kb/kbcheck.py                              # 8 entries, 0 errors, 0 warnings
-python3 kb/publish.py --table wakb-kb-entries      # put x8
-```
+**Authorisation is a live roster, not a list.** Every 15 minutes the listener rebuilds "who is in which pilot" from the groups' own membership, so someone removed from a group loses DM access at the next refresh with nobody maintaining a second list. A roster that builds *empty* is refused, because an empty map denies everybody and looks exactly like the feature being broken.
 
-![DynamoDB items](images/dynamodb-items.png)
+**A stranger gets silence, never a refusal.** "You are not authorised" would confirm to whoever is probing that this number is a support bot for a specific organisation. That is not theirs to learn.
 
-### Step 4: test the brain before WhatsApp is anywhere near it
+**The tenant comes from the roster too.** Measured on the live groups: **215 people**, 119 in one pilot only, 91 in the other only, **4 in both**. So 98% of people are never asked anything. The four are asked once, "which pilot?", and the answer is remembered for 90 days. I nearly built per-message inference for this; the numbers said one remembered answer.
 
-This is the step that saves you an hour. The brain is a Lambda; call it.
+![Direct chat: asked once which team, then answered the same way](images/demo-dm_answer.png)
+*From the demo: the one-time "which team?" question, then a normal answer.*
 
-```bash
-scripts/ask.sh wakb-brain "getting AADSTS70043 again, third time today"
-```
+**A DM is treated as explicit.** Silence is a designed, readable answer in a 120-person group. In a private chat it is a bot ignoring you. So a DM carries the weight an @-mention already carries: the screen is skipped, and a no-match says so in a fixed sentence. The group-only suppressions from section 3 are all guarded on "not explicit", so they switch themselves off in a DM without a second flag. A supporter asking the bot privately is a person with a question.
 
-```json
-{
-  "outcome": "answer",
-  "id": "sso_session_expires_every_4h",
-  "score": 0.95,
-  "reply": "🤖 _Automated answer from the support bot_\n\nThis is expected: ...",
-  "note": "kb dynamodb:8 (8 published); classify sso_session_expires_every_4h 0.95 (EXACT ERROR SEEN ON SCREEN match: AADSTS70043); tokens in=1157 cached=0"
-}
-```
+The whole channel sits behind one environment variable, default off, because a private channel where 200 staff send screenshots is a different data-flow story from a bot in a group, and that story belongs in front of a security reviewer before the flag goes to 1.
 
-And the case that matters more, a message that is *not* a question:
+## 6. The curator: learning from the log without writing
 
-```bash
-scripts/ask.sh wakb-brain "FYI everyone: the proxy issue is fixed, thanks network team"
-```
+Feeding the knowledge base was me reading the group, finding the question a human answered and someone confirmed, writing the entry, ordering the triggers, running the checker, publishing. Two sessions a week of that is not a process. The second division's KB owner had the right expectation: when there is high-confidence new knowledge in the group, the KB should reflect it without a person having to notice.
 
-```json
-{
-  "outcome": "silent",
-  "id": null,
-  "note": "...; classify none 1.00 (Announcement/thanks, not a request for help); ..."
-}
-```
+My constraint: a different layer, integrated in no way that could jeopardise the running bot. That ruled out the brain writing events anywhere and pointed at something better: everything the curator needs is already in `bot.log`. It *pulls* the log, a read the bot cannot tell happened, and nothing on the operational path changed. A bug in the curator cannot reach a group, by construction.
 
-The `note` field is your debugging window. It tells you where the KB came from, what the classifier picked, how confident it was, and why. When the bot does something odd in the group, this is the first thing to read.
+![Curator pipeline: log to threads to offline re-classification, then three tiers with their gates](images/05-curator-tiers.png)
+*Figure 6. Only Tier A touches the KB without a click, and only where the answer text cannot change.*
 
-![Lambda in the console](images/lambda-console.png)
+The log carries every verdict but not the fact most useful for fixing a KB: on a miss, which entry the bot *nearly* picked. The curator recovers it by re-classifying every miss offline through the same brain module, one cheap call per miss. Then three tiers. **Tier A, applied**: a phrasing added to an *existing* entry, at position ≤ 6. **Tier B, draft**: a *new* entry with `status=draft`, which the KB owner publishes in the console they already use. **Tier C, reported**: repeated gaps, review flags and unanswered questions, in a digest to a human.
 
-### Step 5: link the phone
+**The day-one lesson: matching is not correctness.** Tier A's first gate was "re-classifying the missed message against the modified entry clears 0.90." That proves a phrasing makes the entry *match*. It says nothing about whether the match is *right*. In the dry run the curator was about to teach the sign-in entry the phrasing "can't log in to Outlook", lifted from a thread that had actually resolved a drag-and-drop problem. The bot would then have given the sign-in answer, confidently, to every generic login complaint.
 
-```bash
-scripts/qr.sh <instance-id>          # port-forwards 8080 on the box to localhost:8090
-```
+Worse, when I asked the model whether the thread confirmed the entry, it rationalised a confirmation that was not there. So the gate is now a separate, narrow judgement over the thread, *did a human give this entry's answer, and did the asker accept it?*, whose output is checked in code alongside the KB checker (a change may not *add* a warning), a duplicate check, and a rule that an id is never overwritten. In the live run it refused exactly that case, twice.
 
-Open http://localhost:8090. On the bot's phone: WhatsApp → Linked devices → Link a device. Scan.
+**Where a rule can be checked in code, check it in code.** The model is good at "does this thread look like a confirmation?" and bad at also deciding whether to act on it. Split the two.
 
-![QR page](images/qr-page.png)
+Proven end to end in test groups: a phrasing the bot had only clarified at 09:11 was answered at 09:25 after Tier A wrote it (then reverted, because one person confirming in a test group is not evidence), and a seeded thread became a draft that was silent while draft, answered once published, silent again once deleted.
 
-*The code is pixelated on purpose: a live linking QR is a credential.*
+![A curator digest: usage, the 1:1 line, a trigger fix applied, a draft written, an open gap](images/09-curator-digest.png)
+*A digest produced by the template's curator on its bundled example log — the real ones name internal entries, so they stay out of the article.*
 
-You will see `connection closed (code=515)` in the log right after pairing. That is normal: Baileys asks for a restart after the first link, and systemd restarts it in five seconds. Then:
+## 7. The 60-second stall that looked like silence
 
-```
-[2026-09-10T16:42:11.803Z] READY as <bot number>; allowlist=["KB Bot Test"] dms=false
-```
+While seeding those threads, a "got it, thanks!" message produced a Lambda **timeout at 60,000 ms**. The listener printed `outcome=undefined` and moved on, which in a group reads as the bot correctly staying quiet.
 
-### Step 6: ask it something
+![Timeline bars: Lambda timeout 60 s; botocore default read timeout 60 s; after: connect 5 s, read 25 s, two attempts](images/07-timeout-budget.png)
+*Figure 7. The two defaults are equal, so one stalled call consumes the whole budget and fails invisibly.*
 
-I made a private group with just me and the bot and threw nine messages at it: two paraphrased questions, one exact error string, one Hebrew question against an English KB, a screenshot of a terminal error with a vague caption, and four that should get silence (an off-KB question, a thank-you, an announcement, and a "docker is slow" that mentions a KB topic but is a different problem). Nine for nine.
+botocore's default read timeout is 60 seconds. My Lambda's timeout was 60 seconds. One stalled model call ate the entire budget and surfaced as an absence. The client is now bounded (connect 5 s, read 25 s, two attempts), a stall fails fast into the existing fail-silent paths, and the listener prints `BRAIN ERROR` so a human, and the curator, can see it. If you run a model call inside a Lambda, check that the SDK's read timeout is shorter than the function's. The defaults are set so that it is not.
 
-![WhatsApp conversation](images/whatsapp-chat.png)
-
-```
-[04:32:54] IN  <sender>: my vpn keeps disconnecting every 10 minutes since this morning, anyone else?
-[04:32:56] BRAIN answer id=vpn_not_connecting score=0.85 | kb dynamodb:8 (8 published); classify vpn_not_connecting 0.85 (VPN disconnection issue matches typical phrasing)
-[04:32:59] OUT vpn_not_connecting (459 chars)
-[04:33:40] IN  <sender>: how do I connect the CLI to our Snowflake warehouse?
-[04:33:41] BRAIN silent id=null score=0 | classify none 0.95 (Question about Snowflake integration not in knowledge base)
-[04:38:06] IN  <sender>: what does this mean?? [+image]
-[04:38:20] BRAIN answer id=docker_daemon_not_running score=0.99 | vision: "I ran `docker ps` and got the error 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock…'"
-[04:38:23] OUT docker_daemon_not_running (454 chars)
-```
-
-Notice the first one: 0.85, exactly on the floor. The sample KB has four phrasings per entry; a real KB with twenty gets paraphrases into the 0.9s. Notice also the third: the screenshot had a useless caption, and the vision pass turned the pixels into the exact error string the KB keys on. The full nine-case table is in [docs/TESTING.md](../TESTING.md).
-
-That is the whole loop.
-
-## 4. The rules that matter more than the code
-
-If you take nothing else from this, take these. Each one cost me something to learn.
-
-**Silence beats a wrong answer.** My first floor was 0.80. When I replayed the full history and had an independent model grade every confident answer, the 0.85 confidence bucket was 92% wrong or partial. The floor sat five hundredths below the worst bucket and admitted all of it. Raising it to 0.90 and staying silent below cut the judged wrong-answer rate from 42% to 6%, and the bot answered fewer, better questions. The template ships at 0.85 as a starting point. Measure yours.
-
-**Framing is part of the data.** A question about "how do I go back from X" returned nothing, although the entry holding the answer existed. The entry was titled and phrased as an "auth loop" problem. The classifier reads ids, triggers and the gloss; if those describe a different framing of the same fix, it will not match. Fixed by rewriting the triggers, not by touching the model.
-
-**The KB decays silently.** The bot once gave a wrong current version number because an entry was two weeks stale. Nothing crashed. Nothing logged. It was just confidently wrong. Every entry has `last_verified` for this reason, and the "what is the current version" entry in the sample KB carries a note to editors saying exactly that.
-
-**Messages sent while the listener is down are gone.** WhatsApp does not replay them to a linked device. Twice I debugged a "broken" feature that was really a message sent before the service came up. Check timestamps before believing the bot ignored something.
-
-**Right-to-left is a formatting problem, not a language problem.** My group writes Hebrew with English technical terms. WhatsApp renders a mixed line left-to-right unless it starts with an invisible RTL mark, and the *last* line needs a mark of its own or it flips back. The brain detects Hebrew and does this automatically. If your language is LTR you will never notice the code is there.
-
-## 5. Costs, risks, and the alternatives
+## 8. Costs, risks, what is next
 
 ### What it costs
 
 | Item | Monthly |
 |---|---|
-| EC2 t3.small, 24/7 | ~$15 |
+| EC2 t3.small, always on | ~$15 |
 | 16 GB gp3 | ~$1.50 |
 | Lambda, DynamoDB, CloudWatch | rounds to $0 at support-group volume |
-| Bedrock Haiku 4.5, per message | about $0.002 to $0.007 (less with caching) |
+| Model calls, per message | $0.0013 when the screen drops it; ~$0.0024 when classified, with prompt caching |
 
-Call it $18 a month plus a few cents a day.
-
-**This does incur costs.** Before you `apply`, set an AWS Budget alert at, say, $30/month. If you enable `compose` mode or point the classifier at a bigger model, watch the Bedrock line; the KB catalogue is sent with every message and grows with the KB.
+Call it $18 a month plus a few cents a day. The catalogue sits at the end of a stable system prompt with nothing per-request before it, so Bedrock's prompt cache takes two thirds off the classify call once the KB passes about 25 entries. Set a budget alert before `apply`.
 
 ### What could go wrong
 
-- **The number gets banned.** Covered in section 1. Dedicated SIM, reply-only, human pacing. It is a real risk and I will not quantify it, because nobody outside Meta can.
-- **The phone goes offline for 14 days.** WhatsApp unlinks devices. The listener notices, clears its credentials, and shows a new QR. Keep the phone plugged in somewhere.
-- **Bedrock model access is not enabled.** Every classify fails, the brain returns `silent` with the error in `note`, and the bot looks dead. Check `scripts/ask.sh` first.
+- **The number gets banned.** Dedicated SIM, reply-only, human pacing. A real risk I will not quantify, because nobody outside Meta can.
+- **The phone goes offline for 14 days.** WhatsApp unlinks devices. The listener notices and shows a new QR. Keep the phone plugged in.
+- **Messages sent while the listener is down are gone.** WhatsApp does not replay them to a linked device. Check the ready timestamp before believing the bot ignored something.
+- **WhatsApp delivers a message twice.** It happened in the real group: one screenshot, two identical 1,600-character answers to 122 people, because the listener had no duplicate check. It does now.
+- **The KB decays silently.** The bot once gave a stale version number with total confidence. Every entry carries `last_verified` and what it was verified against, and Tier C flags entries whose measurements are undated.
 
-### What else is out there
+### What is next
 
-I surveyed the open-source landscape while writing this; the full table is in [docs/research/open-source-landscape.md](../research/open-source-landscape.md). The short version:
+The curator runs three times a day from a workstation; it belongs on a cloud schedule, with the digest sent as a DM from the bot. Per-user memory for 1:1 ("this person is on macOS, version X") would raise match quality, with one hard rule: memory may feed *matching* and the clarifying question, never the answer text, or the bot starts writing. And `supporters` is the one field that goes stale on its own; a stale entry costs a silence, never a wrong answer, but it is invisible, so re-check it when the bench changes.
 
-- **Transport**: Baileys (TypeScript) and whatsmeow (Go) are the two actively maintained protocol cores. Everything else wraps one of them. If you want an HTTP gateway instead of a library, look at **WAHA** or **GOWA**; avoid anything that needs Chromium on a small instance.
-- **Turn-key platforms**: **n8n + WAHA** if non-developers should edit the flow, **Dify + Evolution API** if you want richer retrieval. Both have native Bedrock support. Flowise was archived in August 2026; Botpress open source is sunset; Typebot paywalls WhatsApp even when self-hosted.
-- **Compliant 1:1**: the Meta Cloud API directly or via Twilio. Note that from 1 October 2026 Meta starts charging for service replies inside the 24-hour window, so an FAQ bot there is no longer free per answer.
+## 9. What I would do differently
 
-### Why I still think a 500-line bot is the right size
+**Pass the whole message shape from day one.** Sender role, quoted author, whether the bot was addressed. I spent two weeks tuning a rule the model could never apply because the fact was not in the input. Structure first, prompt second.
 
-Every platform above does more. None of them made my group's questions get answered more correctly, because the hard part was never the plumbing. It was the twenty-line knowledge base entry, its triggers, and the decision to say nothing when unsure. A small system you fully understand is easier to make careful than a large one you configure.
+**Measure before choosing the floor.** The 0.80 floor was a guess. The replay with an independent judge took an afternoon and moved the wrong-answer rate from 42% to 6%. Have that afternoon before the bot meets real people.
+
+**Treat every truncation as a product rule.** "First six triggers" was a cost optimisation in one function. It became the reason three correct answers were withheld. If a limit changes behaviour, the editing tool must enforce it and the tests must know it.
+
+**Start the second group as a tenant, not a fork.** The tenant model took a day and made every later feature, DMs and the curator, land for both groups at once.
+
+**Put gates in code from the first prototype of anything that writes.** The curator's model judgement rationalised a confirmation on its first run. Not maliciously, not unusually; that is what a model does when the question is "should I act?". Ask it narrow questions and let code decide.
+
+**Test where the user looks.** Invoking the Lambda proved the code. Only sending a message in the group, editing the entry, sending the same question worded differently and watching the reply change proved the bot. The duplicate delivery and the 60-second stall were both invisible one hop below the user.
 
 ## Try it yourself
 
-The repo is [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot). Everything in this article is in it: the code, both infra flavours, the sample knowledge base, the test log, and the survey of alternatives.
+The repo is [github.com/kobyal/whatsapp-kb-bot](https://github.com/kobyal/whatsapp-kb-bot): Terraform and CloudFormation, the listener, the brain with the three-outcome pipeline and conversation awareness, `tenants/` for multi-group, the 1:1 mode behind its flag, the KB checker, the `curator/` layer, and the design notes behind every number here.
 
-1. Fork it. Replace `kb/kb.json` with your team's twenty questions.
-2. `terraform apply` (or `deploy.sh` for CloudFormation), publish the KB, run `scripts/ask.sh` until the answers look right.
-3. Get a dedicated SIM and an old phone. Scan the QR. Start in a private test group.
-4. Tell me what broke. Issues and pull requests are open.
+1. Fork it. Replace the sample `kb.json` with your team's twenty questions. Put the phrasings people actually use in the first six triggers.
+2. `terraform apply`, publish the KB, and call the brain directly with `scripts/ask.sh` until the answers and the silences both look right.
+3. Get a dedicated SIM and an old phone. Scan the QR. Start in a private test group with you and the bot.
+4. Replay a week of your real group's messages before it meets anyone. Grade the confident answers. Then pick the floor.
 
 If you would rather not run an unofficial client, the brain works unchanged behind the official Cloud API for 1:1 support. Only the listener changes.
 
-*Koby Almog leads developer tooling adoption at a bank in Israel and writes about making AI tools useful in regulated environments.*
+One last thing. The most valuable line of code in this project is the one that decides to say nothing. If you build one of these, spend your first week on that decision, not on the answers.
+
+*Koby Almog leads developer tooling adoption at a bank in Israel and writes about making AI tools useful in regulated environments. Personal project; opinions his own.*

@@ -1,0 +1,21 @@
+[
+  {"text": "my vpn keeps disconnecting every 10 minutes since this morning, anyone else?", "expect": "vpn_not_connecting"},
+  {"text": "git push gives me: remote: Authentication failed for 'https://git.example.internal/'", "expect": "git_pat_auth_failed"},
+  {"text": "מישהו יודע איך מתקינים את devctl על ווינדוס? לא מוצא את ההוראות", "expect": "cli_install_windows"},
+  {"text": "docker says Cannot connect to the Docker daemon at unix:///var/run/docker.sock, what does this mean??", "expect": "docker_daemon_not_running"},
+  {"text": "every morning I have to run devctl login again before anything works, is that normal?", "expect": "api_token_expires_overnight"},
+  {"text": "the portal bounces me straight back to the login page after I sign in, it says AADSTS70043", "expect": "sso_login_loop_stale_session"},
+  {"text": "where does devctl keep its logs on a mac? need to attach them to a ticket", "expect": "where_are_the_logs"},
+  {"text": "the IDE keeps popping up a proxy username/password dialog every minute, super annoying", "expect": "proxy_auth_dialog_407"},
+  {"text": "getting SSL certificate problem: unable to get local issuer certificate when I clone on my new linux vm", "expect": "git_ssl_certificate_problem"},
+  {"text": "how do I get platform access for a new team member who joined yesterday?", "expect": "request_platform_access"},
+  {"text": "thanks all, the vpn thing sorted itself out after a reboot 🙏", "expect": "silent"},
+  {"text": "Heads up everyone: devctl 2.16 is rolling out today, run devctl update when you get a chance", "expect": "silent"},
+  {"text": "how do I connect the CLI to our Snowflake warehouse?", "expect": "silent"},
+  {"text": "docker builds are super slow on my laptop today, like 10x slower than usual", "expect": "silent"},
+  {"text": "is the proxy down for everyone right now?", "expect": "silent"},
+  {"text": "אאוטלוק מבקש ממני סיסמה כל פעם שאני פותחת אותו, מה עושים?", "expect": "outlook_keeps_asking_to_sign_in", "tenant": "office-it"},
+  {"text": "לא רואים אותי בטימס, המסך שלי שחור", "expect": "teams_camera_black_screen", "tenant": "office-it"},
+  {"text": "לאיזה wifi אני אמורה לחבר את הלפטופ במשרד?", "expect": "wifi_guest_vs_corp", "tenant": "office-it"},
+  {"text": "מישהו יודע אם המדפסת בקומה 3 עובדת עכשיו?", "expect": "silent", "tenant": "office-it"}
+]

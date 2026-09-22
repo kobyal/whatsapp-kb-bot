@@ -1,5 +1,5 @@
 node_modules/
-brain/kb.json
+brain/tenants.json
 brain/__pycache__/
 __pycache__/
 *.zip
@@ -12,3 +12,5 @@ infra/terraform/.terraform.lock.hcl
 # WhatsApp session credentials must never be committed
 auth/
 data/
+curator/.cache/
+.pytest_cache/
