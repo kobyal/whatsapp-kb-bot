@@ -12,7 +12,7 @@ in step with it: multi-tenant, conversation-aware, with an optional 1:1 mode and
 
 ![architecture](docs/diagrams/architecture.png)
 
-**Read the article on Medium:** *coming soon* — the write-up of how this was built, with diagrams and a short demo (`docs/media/demo/demo.mp4`).
+**Read the article on Medium:** *coming soon* — the write-up of how this was built, with diagrams and a 38-second demo in Hebrew (`docs/media/demo/demo.mp4`; English cut `demo-en.mp4`) showing a group answer, a deliberate silence, a screenshot being read, and a direct chat.
 
 ## What you get
 
