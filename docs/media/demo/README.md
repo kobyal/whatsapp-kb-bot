@@ -59,3 +59,13 @@ FILM_QUALITY=-ql ~/vscode/projects/my-lab/.venv/bin/python build.py   # 480p15 d
 - Fonts: `Arial Hebrew` for Hebrew lines, `Helvetica Neue` for Latin (macOS system fonts).
 
 Intermediates live under `media/`.
+
+## Narration (Hebrew, the author's voice)
+
+Recorded once, read straight through `NARRATION-he.md` (55 s, QuickTime). Cut into the seven beats
+with Whisper word timestamps, then `retime_to_narration.py` slows each video beat to the speech
+(the voice is never stretched). Result: `demo-narrated.mp4`, 46 s.
+
+Voice cloning was tried first (`clone_narration.py`, Chatterbox Multilingual, which lists Hebrew).
+It runs on an M1 Pro, but the Hebrew output was not usable: Whisper transcribed the clone as
+gibberish and beat 5 hallucinated. Kept as a starting point for languages it handles well.

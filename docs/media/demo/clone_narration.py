@@ -2,16 +2,19 @@
 """Clone the narrator's voice and read NARRATION-he.md, one file per beat, for mix_narration.sh --beats.
 
     python3 -m venv .venv && .venv/bin/pip install chatterbox-tts soundfile
-    .venv/bin/python clone_narration.py my_voice.wav [outdir]
+    .venv/bin/python clone_narration.py my_voice.wav [outdir] [--cfg 0.3]
 
 my_voice.wav: 15-30 s of the narrator speaking Hebrew, quiet room, no music (m4a/mp3 fine: ffmpeg converts).
 Chatterbox Multilingual (Resemble AI, MIT) lists Hebrew; on an M1 Pro a 6 s line takes ~15 s on MPS.
 Then: ./mix_narration.sh --beats [outdir]
 """
 import json, re, subprocess, sys, pathlib
+CFG = float(sys.argv[sys.argv.index("--cfg") + 1]) if "--cfg" in sys.argv else 0.5  # lower = faster pacing (README: ~0.3 for fast speakers)
 
 HERE = pathlib.Path(__file__).resolve().parent
-ref = pathlib.Path(sys.argv[1]); out = pathlib.Path(sys.argv[2] if len(sys.argv) > 2 else HERE); out.mkdir(exist_ok=True)
+ref = pathlib.Path(sys.argv[1])
+_pos = [a for i,a in enumerate(sys.argv[1:],1) if not a.startswith("--") and sys.argv[i-1] != "--cfg"]
+out = pathlib.Path(_pos[1] if len(_pos) > 1 else HERE); out.mkdir(exist_ok=True)
 
 # reference -> 24 kHz mono wav (the model resamples anyway; this just avoids codec surprises)
 ref_wav = out / "_ref.wav"
@@ -33,7 +36,7 @@ model = ChatterboxMultilingualTTS.from_pretrained(device=device)
 
 for i, (text, m) in enumerate(zip(lines, marks), 1):
     budget = m["end"] - m["start"] - 0.3
-    wav = model.generate(text, language_id="he", audio_prompt_path=str(ref_wav))
+    wav = model.generate(text, language_id="he", audio_prompt_path=str(ref_wav), cfg_weight=CFG, exaggeration=0.5)
     dur = wav.shape[-1] / model.sr
     f = out / f"beat{i}.wav"
     sf.write(f, wav.squeeze().cpu().numpy(), model.sr)
