@@ -1,0 +1,44 @@
+[
+ {
+  "name": "title",
+  "start": 0.0,
+  "t": 2.6,
+  "end": 3.0
+ },
+ {
+  "name": "group_answer",
+  "start": 3.0,
+  "t": 8.07,
+  "end": 8.37
+ },
+ {
+  "name": "group_silence",
+  "start": 8.37,
+  "t": 14.67,
+  "end": 14.67
+ },
+ {
+  "name": "group_screenshot",
+  "start": 14.67,
+  "t": 19.93,
+  "end": 20.23
+ },
+ {
+  "name": "dm_answer",
+  "start": 20.23,
+  "t": 28.7,
+  "end": 28.7
+ },
+ {
+  "name": "dm_nomatch",
+  "start": 28.7,
+  "t": 33.77,
+  "end": 33.77
+ },
+ {
+  "name": "end_card",
+  "start": 33.77,
+  "t": 37.37,
+  "end": 37.7
+ }
+]

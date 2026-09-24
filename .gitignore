@@ -25,3 +25,5 @@ docs/media/demo/beat*.wav
 docs/media/demo/demo-narrated.mp4
 docs/media/demo/marks-narrated.json
 docs/media/demo/_retime/
+docs/media/demo/film/media/
+docs/media/demo/film/frames*/
