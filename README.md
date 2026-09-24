@@ -17,7 +17,7 @@ silence, a screenshot being read, and a direct chat. The silent cuts are in the 
 (`docs/media/demo/demo.mp4` Hebrew, `demo-en.mp4` English); `film/` rebuilds either from one
 scene, and `recorder.py` + `retime_to_narration.py` add narration.
 
-**Read the article on Medium:** *coming soon* — the write-up of how this was built.
+**Read the article on Medium:** https://medium.com/@kobyal/your-support-group-asks-the-same-20-questions-057456740dfa — how it was built, what broke, and a step-by-step guide to standing one up yourself.
 
 ## What you get
 
