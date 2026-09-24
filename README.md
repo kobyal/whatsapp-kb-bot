@@ -57,6 +57,13 @@ Everything else is on-demand and rounds to zero.
 - **The KB is the product.** The code is a few hundred lines. Stale entries are the failure
   mode you will actually hit; every entry has a `last_verified` date and a `verified_against`
   line for that reason.
+- **Start small, and leave most of this switched off.** One group, one knowledge base, twenty
+  entries. 1:1 mode and the curator are both **off by default** and should stay off for the
+  first couple of weeks: they exist because the bot outgrew a single group, and neither helps
+  on day one. Run it, read every answer it gives, and fix the KB. Turn on 1:1 when people start
+  asking you privately what the group already answered. Turn on the curator when adding entries
+  by hand starts to annoy you. A bot that answers twenty questions well beats one with every
+  feature enabled and a knowledge base nobody trusts.
 
 ## Quick start (Terraform)
 
