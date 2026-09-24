@@ -12,7 +12,12 @@ in step with it: multi-tenant, conversation-aware, with an optional 1:1 mode and
 
 ![architecture](docs/diagrams/architecture.png)
 
-**Read the article on Medium:** *coming soon* — the write-up of how this was built, with diagrams and a 38-second demo in Hebrew (`docs/media/demo/demo.mp4`; English cut `demo-en.mp4`) showing a group answer, a deliberate silence, a screenshot being read, and a direct chat.
+**Watch the 44-second demo:** https://youtu.be/XYJXuLu0HpE — a group answer, a deliberate
+silence, a screenshot being read, and a direct chat. The silent cuts are in the repo
+(`docs/media/demo/demo.mp4` Hebrew, `demo-en.mp4` English); `film/` rebuilds either from one
+scene, and `recorder.py` + `retime_to_narration.py` add narration.
+
+**Read the article on Medium:** *coming soon* — the write-up of how this was built.
 
 ## What you get
 
