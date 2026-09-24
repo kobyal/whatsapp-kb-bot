@@ -11,7 +11,9 @@ import json, pathlib, subprocess, sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 args = [a for a in sys.argv[1:] if not a.startswith("--")]
-beatdir = pathlib.Path(args[0]) if args else HERE
+# Absolute: ffmpeg resolves the paths inside a concat list relative to the list file itself,
+# so a relative BEATDIR silently becomes voice/_retime/voice/_retime/seg1.mp4 and fails.
+beatdir = (pathlib.Path(args[0]).resolve() if args else HERE)
 gap = float(sys.argv[sys.argv.index("--gap") + 1]) if "--gap" in sys.argv else 0.5
 video, marks = HERE / "demo.mp4", json.load(open(HERE / "marks.json"))
 work = beatdir / "_retime"; work.mkdir(exist_ok=True)

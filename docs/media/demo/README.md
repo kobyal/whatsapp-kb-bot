@@ -62,9 +62,23 @@ Intermediates live under `media/`.
 
 ## Narration (Hebrew, the author's voice)
 
-Recorded once, read straight through `NARRATION-he.md` (55 s, QuickTime). Cut into the seven beats
-with Whisper word timestamps, then `retime_to_narration.py` slows each video beat to the speech
-(the voice is never stretched). Result: `demo-narrated.mp4`, 46 s.
+Record it in the browser, one beat at a time:
+
+    python3 docs/media/demo/recorder.py          # http://localhost:8801
+    python3 docs/media/demo/retime_to_narration.py docs/media/demo/voice
+
+`recorder.py` is a local page: a card per beat of `NARRATION-he.md` with record / stop / play,
+a live level meter on the chosen microphone, and every take written straight to
+`docs/media/demo/voice/beat<N>.wav` (a re-take overwrites just that beat). It runs on localhost
+and nothing is uploaded. Two checks it makes that an ear cannot: a take the microphone never
+heard is reported as silent instead of becoming a silent beat in the film, and each card shows
+the beat's length so you see at once when a take runs long.
+
+`retime_to_narration.py` then slows each piece of VIDEO to fit its take — the voice is never
+time-stretched — and mixes. Result: `demo-narrated.mp4`, 46 s from a 37.7 s silent cut.
+
+The first version was recorded as one 55-second take and cut by Whisper word timestamps; the
+recorder replaces that because fixing one line no longer means reading the whole script again.
 
 Voice cloning was tried first (`clone_narration.py`, Chatterbox Multilingual, which lists Hebrew).
 It runs on an M1 Pro, but the Hebrew output was not usable: Whisper transcribed the clone as
