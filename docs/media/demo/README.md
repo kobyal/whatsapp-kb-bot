@@ -62,15 +62,22 @@ Intermediates live under `media/`.
 
 ## Narration (Hebrew, the author's voice)
 
-Record it in the browser, one beat at a time:
+There are two films, and each is narrated in its own language — the Hebrew cut for a Hebrew
+audience, the English cut for an English one. Record in the browser, one beat at a time:
 
-    python3 docs/media/demo/recorder.py          # http://localhost:8801
-    python3 docs/media/demo/retime_to_narration.py docs/media/demo/voice
+    python3 docs/media/demo/recorder.py             # Hebrew  -> voice/     (localhost:8801)
+    python3 docs/media/demo/recorder.py --lang en   # English -> voice-en/  (localhost:8802)
+
+    python3 docs/media/demo/retime_to_narration.py            # -> demo-narrated.mp4
+    python3 docs/media/demo/retime_to_narration.py --lang en  # -> demo-en-narrated.mp4
+
+Both can be open at once; they share no file. The scripts are `NARRATION-he.md` and
+`NARRATION-en.md`, and each is timed against its own film's beats.
 
 `recorder.py` is a local page: a card per beat of `NARRATION-he.md` with record / stop / play,
 a live level meter on the chosen microphone, and every take written straight to
-`docs/media/demo/voice/beat<N>.wav` (a re-take overwrites just that beat). It runs on localhost
-and nothing is uploaded. Two checks it makes that an ear cannot: a take the microphone never
+`voice/beat<N>.wav` (a re-take overwrites just that beat). It runs on localhost and nothing is
+uploaded. Two checks it makes that an ear cannot: a take the microphone never
 heard is reported as silent instead of becoming a silent beat in the film, and each card shows
 the beat's length so you see at once when a take runs long.
 
