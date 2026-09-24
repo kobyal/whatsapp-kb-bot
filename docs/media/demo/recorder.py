@@ -28,6 +28,7 @@ import http.server
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -83,6 +84,8 @@ UI = {
  "micfix":   (" — אשרו גישה בדפדפן, ובמק: הגדרות מערכת ← פרטיות ואבטחה ← מיקרופון.",
               " — allow it in the browser, and on a Mac in System Settings > Privacy & Security > Microphone."),
  "micname":  ("מיקרופון", "Microphone"),
+ "noserver": ("⚠ ההקלטה לא נשמרה — שרת ההקלטה לא רץ. להריץ שוב  python3 docs/media/demo/recorder.py  ולרענן את הדף",
+              "⚠ not saved — the recorder server is not running. Start it again with  python3 docs/media/demo/recorder.py  and reload this page"),
 }
 def U(k):
     return UI[k][0 if LANG == "he" else 1]
@@ -188,8 +191,21 @@ async function start(card) {
     const blob = new Blob(chunks, { type: 'audio/webm' });
     const st = $('.state', card);
     st.textContent = '__SAVING__'; st.className = 'state';
-    const r = await fetch('/save?n=' + card.dataset.n, { method: 'POST', body: blob });
-    const res = await r.json().catch(() => ({}));
+    // The recorder is a local server, and it can be gone (window closed, Ctrl-C, a machine
+    // asleep). Without this the fetch rejects, the handler dies half way, and the card sits on
+    // "recording" for ever -- which looks exactly like a Stop button that does nothing.
+    let r, res = {};
+    try {
+      r = await fetch('/save?n=' + card.dataset.n, { method: 'POST', body: blob });
+      res = await r.json().catch(() => ({}));
+    } catch (e) {
+      card.classList.remove('rec');
+      st.textContent = '__NOSERVER__'; st.className = 'state silent';
+      $('.go', card).disabled = false; $('.stop', card).disabled = true;
+      document.querySelectorAll('.go').forEach((b) => b.disabled = false);
+      rec = null; clearInterval(tick);
+      return;
+    }
     card.classList.remove('rec', 'done', 'over');
     if (!r.ok) { st.textContent = '__FAILED__'; }
     else if (res.silent) { st.textContent = '__NOSOUND__'; st.className = 'state silent'; }
@@ -244,7 +260,7 @@ def page():
                        ("next", "__NEXT__"), ("cmd", "__CMD__"), ("saving", "__SAVING__"),
                        ("failed", "__FAILED__"), ("nosound", "__NOSOUND__"), ("savedover", "__SAVEDOVER__"),
                        ("saved", "__SAVED__"), ("recording", "__RECORDING__"), ("micerr", "__MICERR__"),
-                       ("micfix", "__MICFIX__"), ("micname", "__MICNAME__")):
+                       ("micfix", "__MICFIX__"), ("micname", "__MICNAME__"), ("noserver", "__NOSERVER__")):
         page = page.replace(token, U(key))
     return page.replace("__LANG__", LANG).encode()
 
@@ -274,6 +290,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         VOICE.mkdir(exist_ok=True)
         raw = VOICE / f"beat{n}.webm"
         raw.write_bytes(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+        # One-deep undo. A re-take overwrites the file, and a bad one (a muted microphone, a
+        # stray click) would otherwise destroy a good recording with nothing to go back to.
+        prev = VOICE / f"beat{n}.wav"
+        if prev.exists():
+            (VOICE / ".previous").mkdir(exist_ok=True)
+            shutil.copy2(prev, VOICE / ".previous" / f"beat{n}.wav")
         # Convert on save: the builders take wav, and a webm that only the browser can read
         # is a trap you discover at build time instead of here.
         wav = VOICE / f"beat{n}.wav"
