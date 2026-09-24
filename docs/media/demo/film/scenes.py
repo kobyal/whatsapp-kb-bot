@@ -24,6 +24,11 @@ INK = "#1c2422"; MUTED = "#6b7a76"; META = "#8a978f"
 ACC = "#2a9d7c"         # accent: quote bar, header line
 BG = "#0f1a17"          # film ground
 CAP = "#e9f1ee"; CAPM = "#9db8ae"
+# The title card sits on the bare background with nothing else on screen, so its lines need more
+# contrast than a caption beside a bright chat panel: at CAPM the subtitle was hard to read and
+# the English gloss under it was nearly invisible.
+TITLE_SUB = "#d7e6e0"       # subtitle under the title
+TITLE_GLOSS = "#a8c2b8"     # the one-line English gloss on the Hebrew film
 AMBER = "#f2b84b"
 
 EN = "Helvetica Neue"
@@ -364,10 +369,10 @@ class Demo(Scene):
         # ---- title beat (~3 s)
         self.beat("title")
         t = line(T("film_title"), 40 if RTL else 34, CAP, BOLD)
-        s = line(T("film_sub"), 24 if RTL else 21, CAPM).next_to(t, DOWN, buff=0.35)
+        s = line(T("film_sub"), 24 if RTL else 21, TITLE_SUB).next_to(t, DOWN, buff=0.35)
         bits = [t, s]
         if RTL:   # a one-line English gloss, for a Hebrew film shown to a mixed audience
-            bits.append(Text(STRINGS["film_sub"][1], font_size=16, color="#6f8a80").next_to(s, DOWN, buff=0.3))
+            bits.append(Text(STRINGS["film_sub"][1], font_size=17, color=TITLE_GLOSS).next_to(s, DOWN, buff=0.3))
         self.play(FadeIn(t, shift=UP * 0.2), run_time=0.7)
         self.play(*[FadeIn(b) for b in bits[1:]], run_time=0.5)
         self.wait(1.4); self.mark()

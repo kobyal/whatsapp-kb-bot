@@ -14,31 +14,31 @@
  {
   "name": "group_silence",
   "start": 8.37,
-  "t": 14.67,
-  "end": 14.67
+  "t": 14.3,
+  "end": 14.3
  },
  {
   "name": "group_screenshot",
-  "start": 14.67,
-  "t": 19.93,
-  "end": 20.23
+  "start": 14.3,
+  "t": 19.57,
+  "end": 19.87
  },
  {
   "name": "dm_answer",
-  "start": 20.23,
-  "t": 28.7,
-  "end": 28.7
+  "start": 19.87,
+  "t": 28.33,
+  "end": 28.33
  },
  {
   "name": "dm_nomatch",
-  "start": 28.7,
-  "t": 33.77,
-  "end": 33.77
+  "start": 28.33,
+  "t": 33.4,
+  "end": 33.4
  },
  {
   "name": "end_card",
-  "start": 33.77,
-  "t": 37.37,
-  "end": 37.7
+  "start": 33.4,
+  "t": 37.0,
+  "end": 37.33
  }
 ]
